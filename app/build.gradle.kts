@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-    namespace = "com.app.ai.planner"
+    namespace = "com.app.mindunload"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.app.ai.planner"
+        applicationId = "com.app.mindunload"
         minSdk = 34
         targetSdk = 36
         versionCode = 1

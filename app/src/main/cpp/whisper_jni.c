@@ -17,7 +17,7 @@
 #define LOGW(...) __android_log_print(ANDROID_LOG_WARN, TAG, __VA_ARGS__)
 
 JNIEXPORT jlong JNICALL
-Java_com_app_ai_planner_ai_WhisperLib_initContext(
+Java_com_app_mindunload_ai_WhisperLib_initContext(
         JNIEnv *env, jobject thiz, jstring model_path) {
     (void) thiz;
     const char *path = (*env)->GetStringUTFChars(env, model_path, NULL);
@@ -37,7 +37,7 @@ Java_com_app_ai_planner_ai_WhisperLib_initContext(
 }
 
 JNIEXPORT void JNICALL
-Java_com_app_ai_planner_ai_WhisperLib_freeContext(
+Java_com_app_mindunload_ai_WhisperLib_freeContext(
         JNIEnv *env, jobject thiz, jlong context_ptr) {
     (void) env;
     (void) thiz;
@@ -52,7 +52,7 @@ Java_com_app_ai_planner_ai_WhisperLib_freeContext(
  * Returns the joined text, or NULL when inference failed.
  */
 JNIEXPORT jstring JNICALL
-Java_com_app_ai_planner_ai_WhisperLib_transcribe(
+Java_com_app_mindunload_ai_WhisperLib_transcribe(
         JNIEnv *env, jobject thiz, jlong context_ptr, jint num_threads,
         jfloatArray audio_data, jstring language) {
     (void) thiz;
@@ -107,7 +107,7 @@ Java_com_app_ai_planner_ai_WhisperLib_transcribe(
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_app_ai_planner_ai_WhisperLib_systemInfo(JNIEnv *env, jobject thiz) {
+Java_com_app_mindunload_ai_WhisperLib_systemInfo(JNIEnv *env, jobject thiz) {
     (void) thiz;
     return (*env)->NewStringUTF(env, whisper_print_system_info());
 }

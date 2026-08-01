@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AI Planner"
+rootProject.name = "MindUnload"
 include(":app")
  

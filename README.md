@@ -1,4 +1,4 @@
-# AI Planner
+# MindUnload
 
 A personal AI organizer for Android: speak or type whatever is on your mind — the app turns it into structured tasks, appointments, shopping lists, ideas and notes.
 
@@ -6,7 +6,7 @@ A personal AI organizer for Android: speak or type whatever is on your mind — 
 
 Classic to-do and calendar apps expect you to sort everything yourself: type a title, pick a category, set a date, create a reminder. That is exactly why capturing thoughts fails in everyday life — it is too cumbersome, so it simply doesn't happen.
 
-AI Planner flips this around: **capturing is a single sentence**, by voice or text, straight from the home-screen widget or as a share target from other apps. An AI (Claude) breaks the input down, detects type, date, priority and category, creates reminders and links related entries. The app does the organizing — not you.
+MindUnload flips this around: **capturing is a single sentence**, by voice or text, straight from the home-screen widget or as a share target from other apps. An AI (Claude) breaks the input down, detects type, date, priority and category, creates reminders and links related entries. The app does the organizing — not you.
 
 ## What can it do?
 

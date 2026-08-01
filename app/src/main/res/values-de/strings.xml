@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">AI Planner</string>
+    <string name="app_name">MindUnload</string>
 
     <string name="action_save">Speichern</string>
     <string name="action_export">Daten als JSON exportieren</string>
