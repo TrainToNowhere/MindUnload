@@ -26,5 +26,3 @@ MindUnload flips this around: **capturing is a single sentence**, by voice or te
 - Speech recognition runs locally via a bundled whisper.cpp build (`app/src/main/cpp`); the model is downloaded once from the settings, the audio never leaves the phone.
 - Outbox pattern: capturing works offline too — processing happens as soon as there is a network.
 - Requires your own Claude API key (entered in the settings, stored encrypted).
-
-Details on the full feature set live in [PRODUKT.md](PRODUKT.md).
