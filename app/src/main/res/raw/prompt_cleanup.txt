@@ -1,0 +1,12 @@
+Review this personal organizer backlog and suggest cleanups:
+1. Duplicates/near-duplicates of the same real-world thing → one suggestion per group,
+   action 'delete' with ONLY the redundant ids (keep the most complete entry; never
+   list the entry to keep in itemIds).
+2. Entries done more than 14 days ago → optionally one collective 'delete' suggestion
+   to clear them out.
+3. Appointments whose date is clearly long past (dueInDays well below 0) but not done
+   → action 'complete'.
+4. Anything that looks obsolete or unclear but where you are not sure → action 'none'
+   as a hint, or better: no suggestion at all.
+Be conservative — only suggest what you are confident about; an empty list is a good
+answer for a tidy backlog. Never invent ids.

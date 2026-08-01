@@ -1,0 +1,245 @@
+<resources>
+    <string name="app_name">AI Planner</string>
+
+    <string name="action_save">Save</string>
+    <string name="action_export">Export data as JSON</string>
+    <string name="action_research">Research</string>
+    <string name="action_undo">Undo</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_back">Back</string>
+
+    <string name="tab_today">Today</string>
+    <string name="tab_chat">Chat</string>
+    <string name="tab_tasks">Tasks</string>
+    <string name="tab_appointments">Appointments</string>
+    <string name="tab_shopping">Shopping</string>
+
+    <string name="drawer_title">Everyday Planner</string>
+    <string name="drawer_subtitle">Everything else — without cluttering quick access</string>
+    <string name="drawer_collections">Collections</string>
+    <string name="drawer_knowledge">Knowledge</string>
+    <string name="drawer_ideas">Ideas</string>
+    <string name="drawer_goals">Goals</string>
+    <string name="drawer_categories">Categories · created by Claude</string>
+
+    <string name="today_greeting">Good day.</string>
+    <string name="briefing_label">Morning briefing</string>
+    <string name="briefing_none">No briefing for today yet.</string>
+    <string name="briefing_generating">Creating…</string>
+    <string name="briefing_generate_now">Create now</string>
+    <string name="today_section">Today</string>
+    <string name="today_no_appointments">No appointments today — a free day.</string>
+    <string name="history_section">Activity</string>
+    <string name="resurface_section">Been sitting a while — still relevant?</string>
+    <plurals name="resurface_age">
+        <item quantity="one">since %d week ago</item>
+        <item quantity="other">since %d weeks ago</item>
+    </plurals>
+    <string name="resurface_done">Done</string>
+    <string name="resurface_later">Later</string>
+    <string name="resurface_discard">Discard</string>
+    <string name="review_headline">Review</string>
+    <string name="review_subtitle">What you got done, learned and experienced — to reflect, optimize and repeat.</string>
+    <string name="review_week">Week</string>
+    <string name="review_month">Month</string>
+    <string name="review_year">Year</string>
+    <string name="review_generate">Create review</string>
+    <string name="review_generating">Looking back…</string>
+    <string name="review_empty">Nothing recorded in this period yet.</string>
+    <string name="research_badge">Research worthwhile</string>
+    <string name="research_suggested_hint">Claude thinks research would pay off here.</string>
+    <string name="action_import">Import JSON data</string>
+    <string name="import_done">Imported: %1$d entries, %2$d links.</string>
+    <string name="import_failed">Import failed</string>
+    <string name="drawer_functions">Features</string>
+    <string name="detail_recurrence">Repeats</string>
+    <string name="recur_daily">daily</string>
+    <string name="recur_daily_n">every %d days</string>
+    <string name="recur_weekly">weekly</string>
+    <string name="recur_weekly_n">every %d weeks</string>
+    <string name="recur_monthly">monthly</string>
+    <string name="recur_monthly_n">every %d months</string>
+    <string name="recur_monthly_weekday">monthly (same weekday)</string>
+    <string name="recur_yearly">yearly</string>
+    <string name="recur_yearly_n">every %d years</string>
+    <string name="cleanup_section">Weekly cleanup</string>
+    <string name="cleanup_apply">Apply</string>
+    <string name="cleanup_ignore">Ignore</string>
+    <string name="cleanup_run_now">Clean up now</string>
+    <string name="cleanup_show_items">Show %d affected entries</string>
+    <string name="cleanup_hide_items">Hide %d affected entries</string>
+    <plurals name="cleanup_notification_text">
+        <item quantity="one">%d suggestion — review it in the app.</item>
+        <item quantity="other">%d suggestions — review them in the app.</item>
+    </plurals>
+    <string name="error_with_message">Error: %1$s</string>
+
+    <string name="chat_mode_capture">Capture</string>
+    <string name="chat_mode_ask">Ask</string>
+    <string name="chat_mode_review">Review</string>
+    <string name="chat_mode_research">Research</string>
+    <string name="chat_hint_ask">e.g. tasks on a topic, day plan, knowledge</string>
+    <string name="chat_hint_review">e.g. review of the last week/month/year</string>
+    <string name="chat_hint_research">e.g. tire pressure Golf VII winter tires</string>
+    <string name="chat_research_save">Save as knowledge</string>
+    <string name="chat_research_saved">Saved as a knowledge entry.</string>
+    <string name="voice_record_failed">Recording could not be started.</string>
+    <string name="settings_speech_section">Voice messages</string>
+    <string name="settings_speech_hint">Speech recognition runs on the device (Whisper) — offline, and the recording never leaves the phone. Pick a model and download it once.</string>
+    <string name="settings_speech_download">Download</string>
+    <string name="speech_model_tiny">Tiny — fastest, least accurate</string>
+    <string name="speech_model_base">Base — good balance (recommended)</string>
+    <string name="speech_model_small">Small — most accurate, slowest</string>
+    <string name="status_transcription_no_model">No speech model installed — download one in the settings.</string>
+    <string name="status_transcription_interrupted">Transcription was interrupted — tap retry.</string>
+    <string name="settings_speech_ready">On-device speech recognition is ready.</string>
+    <string name="settings_speech_unavailable">Speech recognition unavailable on this device: %1$s</string>
+    <string name="status_transcription_timeout">Transcription took too long and was stopped.</string>
+    <string name="chat_image_attached">Photo attached — Claude reads its text.</string>
+    <string name="image_no_text">(No legible text on the photo.)</string>
+    <string name="status_transcribing">Transcribing voice message…</string>
+    <string name="status_transcription_failed">Voice message could not be transcribed.</string>
+    <string name="status_transcription_empty">No speech recognized in the recording.</string>
+    <string name="chat_input_hint">e.g. task, appointment, shopping</string>
+    <string name="chat_mode_costly_hint">Research mode: every message starts a web search on the strong model.</string>
+    <string name="chat_clear_title">Clear chat</string>
+    <string name="chat_clear_confirm">Delete the whole chat history? Entries created from it (tasks, appointments, shopping, wiki) are kept.</string>
+    <string name="chat_cleared">Chat cleared.</string>
+    <string name="chat_clear_nothing">Nothing to clear — the entries shown are still being processed.</string>
+    <string name="status_pending">Waiting for processing…</string>
+    <string name="status_processing">Processing…</string>
+    <string name="status_no_key">No API key configured</string>
+    <string name="status_waiting_network">Waiting for network — will be processed automatically</string>
+    <string name="chat_link_created">Link created: %1$s ↔ %2$s</string>
+    <plurals name="chat_items_saved">
+        <item quantity="one">%d entry saved</item>
+        <item quantity="other">%d entries saved</item>
+    </plurals>
+    <string name="chat_nothing_applied">Nothing to save or change found in this input.</string>
+    <plurals name="chat_commands_skipped">
+        <item quantity="one">%d command could not be matched to an entry.</item>
+        <item quantity="other">%d commands could not be matched to an entry.</item>
+    </plurals>
+
+    <string name="tasks_subtitle">%d open · by priority</string>
+    <string name="priority_group_high">High</string>
+    <string name="priority_group_medium">Medium</string>
+    <string name="priority_group_low">Low</string>
+    <string name="list_empty">Nothing here yet.</string>
+
+    <string name="appointments_subtitle">Grouped by month and week</string>
+    <string name="appointments_week_label">Week %1$d</string>
+    <string name="appointments_free_days">Free: %1$s</string>
+    <string name="appointments_week_empty">No appointments this week.</string>
+    <string name="appointments_today_label">Today · %1$s</string>
+    <string name="appointments_empty">No upcoming appointments.</string>
+
+    <string name="shopping_subtitle">%1$d lists · %2$d open</string>
+    <string name="shopping_empty">Your shopping lists are empty.</string>
+    <string name="shopping_default_list">Shopping</string>
+
+    <string name="knowledge_subtitle">Your second brain · %d entries</string>
+    <string name="knowledge_searching">Searching your knowledge…</string>
+    <string name="knowledge_empty">No knowledge entries yet — capture e.g. \"tire pressure 2.4 bar front\".</string>
+    <string name="knowledge_no_content">No details saved for this entry.</string>
+
+    <string name="ideas_subtitle">%d collected</string>
+    <string name="ideas_empty">No ideas collected yet.</string>
+
+    <string name="goals_subtitle">%d active</string>
+    <string name="goals_empty">No goals yet.</string>
+
+    <string name="detail_overdue">Overdue</string>
+    <string name="detail_category">Category</string>
+    <string name="detail_priority">Priority</string>
+    <string name="detail_due">Due</string>
+    <string name="linked_items_header">Linked entries</string>
+    <string name="detail_notes_header">Content</string>
+    <string name="research_header">Research</string>
+    <string name="research_cost_hint">Uses the strong model — starts only on your tap.</string>
+    <string name="research_note_subtitle">Researched on %1$s · tap to open</string>
+    <string name="research_back">To entry</string>
+    <string name="research_label">Research · %1$s</string>
+    <string name="sources_header">Sources</string>
+    <string name="research_promote">Save as wiki article</string>
+
+    <string name="due_overdue_since">overdue since %1$s</string>
+    <string name="due_today">today</string>
+    <string name="due_tomorrow">tomorrow</string>
+
+    <string name="type_task">Task</string>
+    <string name="type_idea">Idea</string>
+    <string name="type_goal">Goal</string>
+    <string name="type_appointment">Appointment</string>
+    <string name="type_shopping_item">Shopping item</string>
+    <string name="type_note">Note</string>
+
+    <string name="priority_high">High priority</string>
+    <string name="priority_medium">Medium priority</string>
+    <string name="priority_low">Low priority</string>
+
+    <string name="research_running">Researching…</string>
+    <string name="research_failed">Research failed</string>
+
+    <string name="settings_headline">Settings</string>
+    <string name="settings_api_key_section">Anthropic API key</string>
+    <string name="settings_key_present">API key is configured.</string>
+    <string name="settings_key_missing">No API key configured — capture processing and research will not work.</string>
+    <string name="settings_key_label">API key (sk-ant-…)</string>
+    <string name="settings_key_saved">Saved.</string>
+    <string name="settings_briefing_time">Daily notification at %1$s</string>
+    <string name="settings_briefing_change">Change time</string>
+    <string name="settings_export_section">Data export</string>
+    <string name="settings_weather_section">Weather for the briefing</string>
+    <string name="settings_weather_hint">Coordinates for the daily weather note (Open-Meteo, free). Leave empty to skip weather.</string>
+    <string name="settings_weather_lat">Latitude</string>
+    <string name="settings_weather_lon">Longitude</string>
+
+    <string name="usage_title">API usage</string>
+    <string name="usage_subtitle">Tokens and estimated cost — counted locally per call</string>
+    <string name="usage_month_section">This month</string>
+    <string name="usage_of_budget">of %1$s budget</string>
+    <string name="usage_remaining">Remaining: %1$s</string>
+    <string name="usage_calls">%1$d API calls this month</string>
+    <string name="usage_by_model">By model</string>
+    <string name="usage_empty">No API calls recorded this month yet.</string>
+    <string name="usage_tokens_line">In %1$s · Out %2$s · Cache %3$s · %4$d calls</string>
+    <string name="usage_budget_section">Monthly budget</string>
+    <string name="usage_budget_label">Budget in USD</string>
+    <string name="usage_price_note">Estimate based on list prices (07/2026): Haiku $1/$5, Sonnet $3/$15 per million tokens; cache write 1.25×, cache read 0.1× of the input price. Recording starts with this app version.</string>
+    <string name="settings_model_parsing">Structuring &amp; linking</string>
+    <string name="settings_model_research">Research</string>
+    <string name="export_done">Export written.</string>
+    <string name="export_failed">Export failed</string>
+    <string name="export_cancelled">Export cancelled.</string>
+    <string name="import_cancelled">Import cancelled.</string>
+    <string name="settings_weather_saved">Location saved.</string>
+    <string name="settings_weather_cleared">Location removed — the briefing runs without weather.</string>
+    <string name="settings_weather_invalid">Please enter both latitude and longitude as numbers.</string>
+    <string name="settings_briefing_saved">Briefing time set to %1$s.</string>
+    <string name="cleanup_started">Cleanup started…</string>
+    <string name="cleanup_running">Cleaning up…</string>
+    <string name="cleanup_done">Cleanup finished — suggestions appear on the Today page.</string>
+    <string name="cleanup_failed">Cleanup failed — check the API key and your connection.</string>
+    <string name="research_promoted">Saved as wiki article.</string>
+    <string name="research_promoted_button">Saved as wiki article ✓</string>
+    <string name="research_promote_failed">Could not save the wiki article.</string>
+
+    <string name="command_applied_fallback">Changed \"%1$s\".</string>
+
+    <string name="widget_label">Quick capture</string>
+    <string name="widget_description">Capture tasks, appointments and more by voice — straight from the home screen.</string>
+    <string name="widget_voice_capture">Capture by voice</string>
+    <string name="widget_open_app">Open app</string>
+    <string name="tile_label">Voice capture</string>
+    <string name="voice_capture_saved">Captured — will be processed.</string>
+    <string name="voice_capture_unavailable">Speech recognition is not available.</string>
+
+    <string name="notification_channel_appointments">Appointment reminders</string>
+    <string name="notification_appointment_title">Appointment</string>
+    <string name="notification_channel_briefing">Morning briefing</string>
+    <string name="notification_briefing_title">Morning briefing</string>
+    <string name="category_subtitle">%d entries</string>
+    <string name="category_empty">Nothing in this category yet.</string>
+</resources>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?><!-- Sprechblase (Creme) mit KI-Funke (Grün) — Farben aus ui/theme/Theme.kt.
+     Alles innerhalb der 66dp-Safe-Zone des adaptiven Icons. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#F6F4EF"
+        android:pathData="M41,38 L67,38 A10,10 0 0 1 77,48 L77,60 A10,10 0 0 1 67,70 L52,70 L43,78 L43,70 L41,70 A10,10 0 0 1 31,60 L31,48 A10,10 0 0 1 41,38 Z" />
+    <path
+        android:fillColor="#3E624F"
+        android:pathData="M54,42 C55.8,49 59,52.2 66,54 C59,55.8 55.8,59 54,66 C52.2,59 49,55.8 42,54 C49,52.2 52.2,49 54,42 Z" />
+</vector>

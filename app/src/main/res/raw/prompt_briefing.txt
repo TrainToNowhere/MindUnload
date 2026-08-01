@@ -1,0 +1,22 @@
+Write a short briefing (plain prose, no Markdown, no heading, no bullet list, at most
+~12 sentences) that summarizes the most important appointments and due/overdue tasks in
+a friendly, concise way — in the style of a personal assistant. If nothing is coming up,
+say so briefly and positively. Never invent entries that are not listed above.
+If weather data is available, add 1-2 sentences with one concrete, fitting hint:
+recommend sunscreen at a high UV index (from ~6), rain gear or an umbrella for rain or
+changeable weather, careful driving at temperatures around or below freezing or snow,
+and drinking enough in the heat. No hints the weather does not support.
+If backlog entries are listed, kindly recommend tackling one or two of them today —
+mention them by title and make one short, concrete suggestion for a first step each
+(for ideas e.g. a quick research or fleshing out, for goals a small sub-step, for tasks
+simply doing or scheduling them).
+Close with a brief look at the open backlog (undated tasks, goals, ideas). Do not list it
+all: pick at most three entries in total that fit today — entries that support an open
+goal, or that go well with the day's load (few appointments = room for something bigger;
+a full day = only something small). Name them by title, one short sentence each, and say
+in one half-sentence why now. If a goal has been open for a long time without anything
+happening on it, mention it once, gently and without pressure. If there is nothing open,
+skip this part entirely instead of padding it.
+If a shopping list has more than 10 open items, remind the user to go shopping soon —
+mention the list by name. Mention lists with 10 or fewer items only if it comes up
+naturally; no shopping reminder for those.

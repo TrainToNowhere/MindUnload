@@ -1,0 +1,7 @@
+Use web search first to find current information — do not answer from your training
+knowledge alone. Then summarize the key findings compactly (max ~400 words): what should
+the user know, which options / next steps are there?
+End the answer with a section labeled exactly "Quellen:" (keep this exact label
+regardless of the answer language) as a list in the format "- Title — URL". List only
+URLs that actually appeared in your search results; never invent URLs. Only if the web
+search yields nothing useful, write: "Quellen: keine".
