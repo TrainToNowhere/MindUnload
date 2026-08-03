@@ -6,41 +6,27 @@
     android:viewportHeight="108">
     <!-- Gleiche Geometrie wie ic_launcher_foreground, damit Themed Icons identisch sitzen. -->
     <group
-        android:scaleX="0.5992"
-        android:scaleY="0.5992"
-        android:translateX="27.79"
-        android:translateY="22.69">
+        android:scaleX="1.1868"
+        android:scaleY="1.1868"
+        android:translateX="-9.47"
+        android:translateY="-5.03">
         <path
-            android:pathData="M24,28 L36,14 L48,32 L60,14 L72,32 L84,20"
-            android:strokeColor="#FFFFFF"
-            android:strokeWidth="7"
-            android:strokeLineCap="round"
-            android:strokeLineJoin="round"/>
-        <path
-            android:pathData="M24,56 C36,48 48,64 60,54 C70,46 78,56 84,54"
-            android:strokeColor="#FFFFFF"
-            android:strokeWidth="7"
-            android:strokeLineCap="round"
-            android:strokeLineJoin="round"/>
-        <!-- Senkrechter Balken auf x=10, endet bei Tinte 68.5 - Luecke 9 zum Punkt darunter.
-             Die Luecke ist bewusst nicht kleiner: enger gestellt liest sich Balken ueber
-             Punkt als Ausrufezeichen. -->
-        <path
-            android:pathData="M10,14 V69"
-            android:strokeColor="#FFFFFF"
-            android:strokeWidth="7"
-            android:strokeLineCap="round"
-            android:strokeLineJoin="round"/>
-        <!-- Aufzaehlungspunkt auf der Achse des Balkens, Mittelpunkt (10,84), Radius 6.5 -->
-        <path
-            android:pathData="M3.5,84 A6.5,6.5 0 1 1 16.5,84 A6.5,6.5 0 1 1 3.5,84 Z"
+            android:pathData="M52.96,25.56 L63.88,31.02 L42.04,41.94 L31.12,36.48 Z"
             android:fillColor="#FFFFFF"/>
-        <!-- Zeile buendig mit Zacken- und Wellenzeile bei x=24 -->
         <path
-            android:pathData="M24,84 H84"
-            android:strokeColor="#FFFFFF"
-            android:strokeWidth="7"
-            android:strokeLineCap="round"
-            android:strokeLineJoin="round"/>
+            android:pathData="M65.96,32.06 L76.88,37.52 L55.04,48.44 L44.12,42.98 Z"
+            android:fillColor="#FFFFFF"/>
+        <path
+            android:pathData="M77.92,39.08 L77.92,50.00 L56.08,60.92 L56.08,50.00 Z"
+            android:fillColor="#FFFFFF"/>
+        <path
+            android:pathData="M77.92,52.08 L77.92,63.00 L56.08,73.92 L56.08,63.00 Z"
+            android:fillColor="#FFFFFF"/>
+        <path
+            android:pathData="M29.04,39.60 L39.96,45.06 L39.96,66.90 L29.04,61.44 Z"
+            android:fillColor="#FFFFFF"/>
+        <path
+            android:pathData="M42.04,46.10 L52.96,51.56 L52.96,73.40 L42.04,67.94 Z"
+            android:fillColor="#FFFFFF"/>
     </group>
 </vector>
