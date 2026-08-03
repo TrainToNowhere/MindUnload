@@ -1,11 +1,32 @@
-<?xml version="1.0" encoding="utf-8"?><!-- Themed-Icon-Silhouette: Sprechblase mit ausgestanztem Funken (evenOdd). -->
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="#FFFFFF"
-        android:fillType="evenOdd"
-        android:pathData="M41,38 L67,38 A10,10 0 0 1 77,48 L77,60 A10,10 0 0 1 67,70 L52,70 L43,78 L43,70 L41,70 A10,10 0 0 1 31,60 L31,48 A10,10 0 0 1 41,38 Z M54,42 C55.8,49 59,52.2 66,54 C59,55.8 55.8,59 54,66 C52.2,59 49,55.8 42,54 C49,52.2 52.2,49 54,42 Z" />
+    <!-- Gleiche Geometrie wie ic_launcher_foreground, damit Themed Icons identisch sitzen. -->
+    <group
+        android:scaleX="1.1868"
+        android:scaleY="1.1868"
+        android:translateX="-9.47"
+        android:translateY="-5.03">
+        <path
+            android:pathData="M52.96,25.56 L63.88,31.02 L42.04,41.94 L31.12,36.48 Z"
+            android:fillColor="#FFFFFF"/>
+        <path
+            android:pathData="M65.96,32.06 L76.88,37.52 L55.04,48.44 L44.12,42.98 Z"
+            android:fillColor="#FFFFFF"/>
+        <path
+            android:pathData="M77.92,39.08 L77.92,50.00 L56.08,60.92 L56.08,50.00 Z"
+            android:fillColor="#FFFFFF"/>
+        <path
+            android:pathData="M77.92,52.08 L77.92,63.00 L56.08,73.92 L56.08,63.00 Z"
+            android:fillColor="#FFFFFF"/>
+        <path
+            android:pathData="M29.04,39.60 L39.96,45.06 L39.96,66.90 L29.04,61.44 Z"
+            android:fillColor="#FFFFFF"/>
+        <path
+            android:pathData="M42.04,46.10 L52.96,51.56 L52.96,73.40 L42.04,67.94 Z"
+            android:fillColor="#FFFFFF"/>
+    </group>
 </vector>

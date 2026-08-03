@@ -128,12 +128,23 @@
     <string name="priority_group_low">Low</string>
     <string name="list_empty">Nothing here yet.</string>
 
-    <string name="appointments_subtitle">Grouped by month and week</string>
+    <string name="appointments_subtitle">One month, grouped by week</string>
     <string name="appointments_week_label">Week %1$d</string>
     <string name="appointments_free_days">Free: %1$s</string>
     <string name="appointments_week_empty">No appointments this week.</string>
     <string name="appointments_today_label">Today · %1$s</string>
-    <string name="appointments_empty">No upcoming appointments.</string>
+    <string name="appointments_month_empty">No appointments in this month.</string>
+    <string name="appointments_month_prev">Previous month</string>
+    <string name="appointments_month_next">Next month</string>
+    <string name="appointments_month_today">Today</string>
+    <plurals name="appointments_week_count">
+        <item quantity="one">%d appointment</item>
+        <item quantity="other">%d appointments</item>
+    </plurals>
+    <string name="appointments_week_expand">Show week</string>
+    <string name="appointments_week_collapse">Hide week</string>
+    <string name="appointments_delete">Delete appointment</string>
+    <string name="appointments_delete_confirm">Delete “%1$s”? It disappears from your appointments and its reminder is cancelled.</string>
 
     <string name="shopping_subtitle">%1$d lists · %2$d open</string>
     <string name="shopping_empty">Your shopping lists are empty.</string>
@@ -235,6 +246,23 @@
     <string name="tile_label">Voice capture</string>
     <string name="voice_capture_saved">Captured — will be processed.</string>
     <string name="voice_capture_unavailable">Speech recognition is not available.</string>
+
+    <string name="settings_reminders_section">Appointment reminders</string>
+    <string name="settings_reminders_hint">Pick when to be reminded. Several fire one after another — e.g. 30, 15 and 5 minutes before, plus at the start.</string>
+    <string name="settings_reminders_none">No reminders — appointments stay silent.</string>
+    <string name="reminder_offset_start">At the start</string>
+    <plurals name="reminder_offset_minutes">
+        <item quantity="one">%d minute before</item>
+        <item quantity="other">%d minutes before</item>
+    </plurals>
+    <plurals name="reminder_offset_hours">
+        <item quantity="one">%d hour before</item>
+        <item quantity="other">%d hours before</item>
+    </plurals>
+    <plurals name="reminder_offset_days">
+        <item quantity="one">%d day before</item>
+        <item quantity="other">%d days before</item>
+    </plurals>
 
     <string name="notification_channel_appointments">Appointment reminders</string>
     <string name="notification_appointment_title">Appointment</string>

@@ -41,6 +41,16 @@ interface PlannerItemDao {
     )
     fun appointments(cutoff: Long): Flow<List<PlannerItem>>
 
+    /**
+     * Appointments inside a half-open window [from, to). Unlike [appointments] this keeps past
+     * ones — the month view navigates backwards and has to show months that are already over.
+     */
+    @Query(
+        "SELECT * FROM items WHERE archivedAt IS NULL AND type = 'APPOINTMENT' " +
+                "AND dueAt >= :from AND dueAt < :to ORDER BY done ASC, dueAt ASC",
+    )
+    fun appointmentsBetween(from: Long, to: Long): Flow<List<PlannerItem>>
+
     @Query(
         "SELECT * FROM items WHERE archivedAt IS NULL AND type = 'SHOPPING_ITEM' " +
                 "AND (done = 0 OR doneAt >= :doneCutoff) ORDER BY listName, done ASC, createdAt DESC",

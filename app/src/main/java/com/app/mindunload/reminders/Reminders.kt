@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import androidx.core.net.toUri
 import com.app.mindunload.PlannerApp
 import com.app.mindunload.R
 import com.app.mindunload.data.PlannerItem
@@ -29,6 +30,13 @@ object ReminderScheduler {
     const val CHANNEL_ID = "appointments"
     const val EXTRA_ITEM_ID = "itemId"
     const val EXTRA_TITLE = "title"
+    const val EXTRA_OFFSET = "offsetMinutes"
+
+    /**
+     * Selectable lead times in minutes. [cancel] walks all of them, not just the configured
+     * ones — otherwise alarms from an earlier setting would outlive a change.
+     */
+    val PRESET_OFFSETS = listOf(1440, 120, 60, 30, 15, 10, 5, 0)
 
     fun ensureChannel(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
@@ -41,10 +49,17 @@ object ReminderScheduler {
         )
     }
 
-    private fun pendingIntent(context: Context, item: PlannerItem): PendingIntent {
+    /**
+     * One PendingIntent per (appointment, lead time). They are told apart by the data URI —
+     * extras are ignored when the system compares PendingIntents, so a differing request
+     * code alone would not be enough.
+     */
+    private fun pendingIntent(context: Context, item: PlannerItem, offset: Int): PendingIntent {
         val intent = Intent(context, ReminderReceiver::class.java)
+            .setData("mindunload://reminder/${item.id}/$offset".toUri())
             .putExtra(EXTRA_ITEM_ID, item.id)
             .putExtra(EXTRA_TITLE, item.title)
+            .putExtra(EXTRA_OFFSET, offset)
         return PendingIntent.getBroadcast(
             context,
             item.id.toInt(),
@@ -55,13 +70,47 @@ object ReminderScheduler {
 
     fun schedule(context: Context, item: PlannerItem) {
         val dueAt = item.dueAt ?: return
-        if (dueAt <= System.currentTimeMillis()) return
-        setExactOrFallback(context, dueAt, pendingIntent(context, item))
+        val now = System.currentTimeMillis()
+        val offsets = (context.applicationContext as PlannerApp).settings.reminderOffsets
+        for (offset in offsets) {
+            val triggerAt = dueAt - offset * 60_000L
+            // Lead times already in the past are skipped: an appointment entered 10 minutes
+            // beforehand should still fire its "5 minutes before" reminder.
+            if (triggerAt > now) {
+                setExactOrFallback(context, triggerAt, pendingIntent(context, item, offset))
+            }
+        }
     }
 
     fun cancel(context: Context, item: PlannerItem) {
-        context.getSystemService(AlarmManager::class.java).cancel(pendingIntent(context, item))
+        val alarmManager = context.getSystemService(AlarmManager::class.java)
+        for (offset in PRESET_OFFSETS) {
+            alarmManager.cancel(pendingIntent(context, item, offset))
+        }
     }
+
+    /** Re-applies the configured lead times to every upcoming appointment. */
+    suspend fun rescheduleAll(context: Context) {
+        val app = context.applicationContext as PlannerApp
+        app.repository.itemDao.upcomingAppointments(System.currentTimeMillis()).forEach {
+            cancel(context, it)
+            schedule(context, it)
+        }
+    }
+}
+
+/** "At the start" / "30 minutes before" — used both in the settings and on the notification. */
+fun reminderOffsetLabel(context: Context, minutes: Int): String = when {
+    minutes == 0 -> context.getString(R.string.reminder_offset_start)
+    minutes % 1440 == 0 -> context.resources.getQuantityString(
+        R.plurals.reminder_offset_days, minutes / 1440, minutes / 1440,
+    )
+    minutes % 60 == 0 -> context.resources.getQuantityString(
+        R.plurals.reminder_offset_hours, minutes / 60, minutes / 60,
+    )
+    else -> context.resources.getQuantityString(
+        R.plurals.reminder_offset_minutes, minutes, minutes,
+    )
 }
 
 /**
@@ -81,14 +130,18 @@ class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val title = intent.getStringExtra(ReminderScheduler.EXTRA_TITLE) ?: return
         val itemId = intent.getLongExtra(ReminderScheduler.EXTRA_ITEM_ID, 0)
+        val offset = intent.getIntExtra(ReminderScheduler.EXTRA_OFFSET, 0)
         ReminderScheduler.ensureChannel(context)
         val notification = NotificationCompat.Builder(context, ReminderScheduler.CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(context.getString(R.string.notification_appointment_title))
             .setContentText(title)
+            .setSubText(reminderOffsetLabel(context, offset))
             .setContentIntent(appContentIntent(context))
             .setAutoCancel(true)
             .build()
+        // Same id for every lead time of an appointment: the later reminder replaces the
+        // earlier one instead of stacking up four notifications for one appointment.
         context.getSystemService(NotificationManager::class.java)
             .notify(itemId.toInt(), notification)
     }
