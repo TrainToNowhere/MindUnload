@@ -128,12 +128,23 @@
     <string name="priority_group_low">Niedrig</string>
     <string name="list_empty">Hier ist noch nichts.</string>
 
-    <string name="appointments_subtitle">Nach Monat und Woche gruppiert</string>
+    <string name="appointments_subtitle">Ein Monat, nach Wochen gruppiert</string>
     <string name="appointments_week_label">KW %1$d</string>
     <string name="appointments_free_days">Frei: %1$s</string>
     <string name="appointments_week_empty">Keine Termine in dieser Woche.</string>
     <string name="appointments_today_label">Heute · %1$s</string>
-    <string name="appointments_empty">Keine anstehenden Termine.</string>
+    <string name="appointments_month_empty">Keine Termine in diesem Monat.</string>
+    <string name="appointments_month_prev">Voriger Monat</string>
+    <string name="appointments_month_next">Nächster Monat</string>
+    <string name="appointments_month_today">Heute</string>
+    <plurals name="appointments_week_count">
+        <item quantity="one">%d Termin</item>
+        <item quantity="other">%d Termine</item>
+    </plurals>
+    <string name="appointments_week_expand">Woche aufklappen</string>
+    <string name="appointments_week_collapse">Woche zuklappen</string>
+    <string name="appointments_delete">Termin löschen</string>
+    <string name="appointments_delete_confirm">„%1$s“ löschen? Der Termin verschwindet aus deinen Terminen und die Erinnerung wird abgesagt.</string>
 
     <string name="shopping_subtitle">%1$d Listen · %2$d offen</string>
     <string name="shopping_empty">Deine Einkaufslisten sind leer.</string>
@@ -235,6 +246,23 @@
     <string name="tile_label">Sprach-Erfassung</string>
     <string name="voice_capture_saved">Erfasst — wird verarbeitet.</string>
     <string name="voice_capture_unavailable">Spracherkennung ist nicht verfügbar.</string>
+
+    <string name="settings_reminders_section">Termin-Erinnerungen</string>
+    <string name="settings_reminders_hint">Wähle, wann du erinnert wirst. Mehrere laufen nacheinander — z.B. 30, 15 und 5 Minuten vorher, dazu zu Beginn.</string>
+    <string name="settings_reminders_none">Keine Erinnerungen — Termine bleiben stumm.</string>
+    <string name="reminder_offset_start">Zu Beginn</string>
+    <plurals name="reminder_offset_minutes">
+        <item quantity="one">%d Minute vorher</item>
+        <item quantity="other">%d Minuten vorher</item>
+    </plurals>
+    <plurals name="reminder_offset_hours">
+        <item quantity="one">%d Stunde vorher</item>
+        <item quantity="other">%d Stunden vorher</item>
+    </plurals>
+    <plurals name="reminder_offset_days">
+        <item quantity="one">%d Tag vorher</item>
+        <item quantity="other">%d Tage vorher</item>
+    </plurals>
 
     <string name="notification_channel_appointments">Termin-Erinnerungen</string>
     <string name="notification_appointment_title">Termin</string>

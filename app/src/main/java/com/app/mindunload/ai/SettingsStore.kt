@@ -52,6 +52,26 @@ class SettingsStore(context: Context) {
         }
 
     /**
+     * Lead times for appointment reminders, in minutes before the appointment; 0 = at the start.
+     * Several fire in sequence (e.g. 30, 15, 5, 0). Empty = no reminders at all.
+     * Default is the behaviour that was hard-coded before: a single alarm at the start.
+     */
+    var reminderOffsets: List<Int>
+        get() {
+            val raw = prefs.getString(KEY_REMINDER_OFFSETS, null) ?: return listOf(0)
+            return raw.split(',').mapNotNull { it.trim().toIntOrNull() }
+                .distinct().sortedDescending()
+        }
+        set(value) {
+            prefs.edit {
+                putString(
+                    KEY_REMINDER_OFFSETS,
+                    value.distinct().sortedDescending().joinToString(","),
+                )
+            }
+        }
+
+    /**
      * Speech model used for voice messages (see [WhisperModel]). Only the name is stored;
      * whether the file is actually on the device is answered by [Whisper.isInstalled].
      */
@@ -99,5 +119,6 @@ class SettingsStore(context: Context) {
         const val KEY_WEATHER_LON = "weather_lon"
         const val KEY_MONTHLY_BUDGET = "monthly_budget_usd"
         const val KEY_WHISPER_MODEL = "whisper_model"
+        const val KEY_REMINDER_OFFSETS = "reminder_offsets"
     }
 }

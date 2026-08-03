@@ -36,6 +36,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
 
 val AndroidViewModel.app: PlannerApp
@@ -493,6 +494,14 @@ class ItemsViewModel(application: Application) : AndroidViewModel(application) {
     fun byCategory(name: String): Flow<List<PlannerItem>> =
         repo.itemDao.byCategory(name, listCutoff())
 
+    /** Appointments of one calendar month, past months included. */
+    fun appointmentsOfMonth(month: YearMonth): Flow<List<PlannerItem>> {
+        val zone = ZoneId.systemDefault()
+        val from = month.atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
+        val to = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
+        return repo.itemDao.appointmentsBetween(from, to)
+    }
+
     fun setDone(item: PlannerItem, done: Boolean) {
         viewModelScope.launch {
             repo.itemDao.setDone(item.id, done)
@@ -700,6 +709,17 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun saveKey(key: String) {
         settings.apiKey = key
         hasKey.value = settings.apiKey != null
+    }
+
+    val reminderOffsets = MutableStateFlow(settings.reminderOffsets)
+
+    /** Turns one lead time on or off and re-applies the result to all upcoming appointments. */
+    fun toggleReminderOffset(minutes: Int) {
+        val current = reminderOffsets.value
+        val next = if (minutes in current) current - minutes else current + minutes
+        settings.reminderOffsets = next
+        reminderOffsets.value = settings.reminderOffsets
+        viewModelScope.launch { ReminderScheduler.rescheduleAll(app) }
     }
 
     fun setBriefingTime(hour: Int, minute: Int) {

@@ -7,12 +7,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +42,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.mindunload.R
 import com.app.mindunload.ai.Whisper
 import com.app.mindunload.ai.WhisperModel
+import com.app.mindunload.reminders.ReminderScheduler
+import com.app.mindunload.reminders.reminderOffsetLabel
 import com.app.mindunload.ui.theme.PlannerColors
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -49,6 +53,7 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(
     var keyInput by remember { mutableStateOf("") }
     val hasKey by viewModel.hasKey.collectAsState()
     val briefingTime by viewModel.briefingTime.collectAsState()
+    val reminderOffsets by viewModel.reminderOffsets.collectAsState()
     var showTimePicker by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -200,6 +205,42 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(
                 )
                 OutlinedButton(onClick = { showTimePicker = true }) {
                     Text(stringResource(R.string.settings_briefing_change))
+                }
+            }
+        }
+
+        // Lead times for appointment reminders — several fire one after another.
+        Column(Modifier.padding(top = 20.dp)) {
+            SectionLabel(stringResource(R.string.settings_reminders_section))
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(PlannerColors.surface)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    stringResource(R.string.settings_reminders_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PlannerColors.muted,
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ReminderScheduler.PRESET_OFFSETS.forEach { minutes ->
+                        FilterChip(
+                            selected = minutes in reminderOffsets,
+                            onClick = { viewModel.toggleReminderOffset(minutes) },
+                            label = { Text(reminderOffsetLabel(context, minutes)) },
+                        )
+                    }
+                }
+                if (reminderOffsets.isEmpty()) {
+                    Text(
+                        stringResource(R.string.settings_reminders_none),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PlannerColors.overdue,
+                    )
                 }
             }
         }
