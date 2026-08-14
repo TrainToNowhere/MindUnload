@@ -92,6 +92,9 @@ interface BacklogTools {
     suspend fun agenda(fromMillis: Long, toMillis: Long): List<PlannerItem>
 }
 
+/** One earlier exchange in a multi-turn chat mode — see [ClaudeService.structureThoughts]. */
+data class ThoughtTurn(val userText: String, val assistantText: String)
+
 class ClaudeService(
     private val settings: SettingsStore,
     private val prompts: Prompts,
@@ -253,6 +256,34 @@ class ClaudeService(
             .mapNotNull { block -> block.text().map { it.text() }.orElse(null) }
             .joinToString("\n")
             .ifBlank { throw IllegalStateException("Empty answer") }
+    }
+
+    /**
+     * Chat mode "Structure thoughts": turns a (typically long, transcribed) stream of
+     * thought into a structured Markdown note with an action-item checklist — and,
+     * because it is a real conversation, can ask a follow-up question instead of
+     * guessing, or revise the note once the user replies. [history] is the earlier
+     * turns of this same conversation, oldest first. Runs on the cheap model — this is
+     * reformatting and light dialogue, not research or generation.
+     */
+    suspend fun structureThoughts(
+        text: String,
+        history: List<ThoughtTurn> = emptyList(),
+    ): String = withContext(Dispatchers.IO) {
+        val builder = MessageCreateParams.builder()
+            .model(Models.PARSING)
+            .maxTokens(4096L)
+            .system(prompts.withLanguageRule(R.raw.prompt_structure_system))
+        history.forEach { turn ->
+            builder.addUserMessage(turn.userText).addAssistantMessage(turn.assistantText)
+        }
+        val params = builder.addUserMessage(text).build()
+        val response = client().messages().create(params)
+        logUsage("structureThoughts", response)
+        response.content()
+            .mapNotNull { block -> block.text().map { it.text() }.orElse(null) }
+            .joinToString("\n")
+            .ifBlank { throw IllegalStateException("Empty structured note") }
     }
 
     /** Executes a search_items/list_recent call from the model and formats the result compactly. */

@@ -283,6 +283,16 @@ interface CaptureDao {
     @Query("SELECT * FROM captures ORDER BY createdAt ASC")
     fun allOrdered(): Flow<List<CaptureRequest>>
 
+    /**
+     * Recent finished captures of one chat mode, newest first, excluding [excludeId] —
+     * conversation context for multi-turn chat modes (e.g. structuring thoughts).
+     */
+    @Query(
+        "SELECT * FROM captures WHERE mode = :mode AND status = 'DONE' AND id != :excludeId " +
+                "ORDER BY createdAt DESC LIMIT :limit",
+    )
+    suspend fun recentDoneByMode(mode: String, excludeId: Long, limit: Int): List<CaptureRequest>
+
     @Query("UPDATE captures SET status = :status, errorMessage = :error WHERE id = :id")
     suspend fun setStatus(id: Long, status: CaptureStatus, error: String? = null)
 

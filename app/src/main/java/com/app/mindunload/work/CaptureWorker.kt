@@ -39,6 +39,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Duration
 
+/** How many earlier exchanges the "structure thoughts" mode keeps as conversation context. */
+private const val STRUCTURE_HISTORY_LIMIT = 8
+
 /**
  * Outbox processing: takes PENDING/FAILED captures, has Claude structure them
  * and saves items + link suggestions. Runs with a network constraint and backoff —
@@ -298,8 +301,32 @@ class CaptureWorker(context: Context, params: WorkerParameters) : CoroutineWorke
             }
         }
 
+        ChatMode.STRUCTURE ->
+            claude.structureThoughts(capture.rawText, structureHistory(repo, capture.id))
+
         ChatMode.CAPTURE, ChatMode.RESEARCH ->
             throw IllegalStateException("${capture.mode} handled separately")
+    }
+
+    /**
+     * Earlier turns of this same "structure thoughts" conversation, oldest first — lets
+     * the model react to a reply instead of treating every message as a fresh brain dump.
+     * Bounded window: enough to follow the thread without the prompt growing unbounded.
+     */
+    private suspend fun structureHistory(
+        repo: PlannerRepository,
+        beforeCaptureId: Long,
+    ): List<com.app.mindunload.ai.ThoughtTurn> {
+        val recent = repo.captureDao
+            .recentDoneByMode(ChatMode.STRUCTURE.name, beforeCaptureId, STRUCTURE_HISTORY_LIMIT)
+            .sortedBy { it.createdAt }
+        return recent.mapNotNull { cap ->
+            val answer = repo.chatMessageDao.byCaptureId(cap.id)
+                ?.let { runCatching { JSONObject(it.summaryJson).optString("answer") }.getOrNull() }
+                ?.takeIf { it.isNotBlank() }
+                ?: return@mapNotNull null
+            com.app.mindunload.ai.ThoughtTurn(cap.rawText, answer)
+        }
     }
 
     /** Applies a single change command; returns the description sentence for the chat, or null when it was not applicable. */

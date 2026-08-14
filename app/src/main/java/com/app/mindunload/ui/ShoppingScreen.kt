@@ -1,9 +1,12 @@
 package com.app.mindunload.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,9 +20,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -35,6 +42,8 @@ fun ShoppingScreen(onOpenDrawer: () -> Unit, viewModel: ItemsViewModel = viewMod
     val defaultListName = stringResource(R.string.shopping_default_list)
     val lists = allItems.groupBy { it.listName ?: defaultListName }
     val openCount = allItems.count { !it.done }
+    // Collapsed by default — the tab opens compact, same as the appointments weeks.
+    val expanded = remember { mutableStateMapOf<String, Boolean>() }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -53,9 +62,8 @@ fun ShoppingScreen(onOpenDrawer: () -> Unit, viewModel: ItemsViewModel = viewMod
             )
         }
         lists.forEach { (listName, items) ->
-            item {
-                Column(Modifier.padding(top = 12.dp)) { SectionLabel(listName) }
-            }
+            val isExpanded = expanded[listName] == true
+            val listOpenCount = items.count { !it.done }
             item {
                 Column(
                     Modifier
@@ -63,9 +71,47 @@ fun ShoppingScreen(onOpenDrawer: () -> Unit, viewModel: ItemsViewModel = viewMod
                         .clip(RoundedCornerShape(16.dp))
                         .background(PlannerColors.surface),
                 ) {
-                    items.forEachIndexed { index, shopItem ->
-                        ShoppingRow(shopItem, onToggle = { viewModel.setDone(shopItem, it) })
-                        if (index != items.lastIndex) HorizontalDivider(color = PlannerColors.divider)
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable(
+                                onClickLabel = stringResource(
+                                    if (isExpanded) R.string.shopping_list_collapse
+                                    else R.string.shopping_list_expand
+                                ),
+                                onClick = { expanded[listName] = !isExpanded },
+                            )
+                            .padding(14.dp, 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        SectionLabel(listName)
+                        Spacer(Modifier.weight(1f))
+                        if (!isExpanded) {
+                            Text(
+                                pluralStringResource(
+                                    R.plurals.shopping_list_open_count,
+                                    listOpenCount,
+                                    listOpenCount,
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (listOpenCount == 0) PlannerColors.faint else PlannerColors.muted,
+                            )
+                        }
+                        BackChevronIcon(
+                            modifier = Modifier
+                                .padding(start = 8.dp)
+                                .rotate(if (isExpanded) 90f else 270f),
+                            tint = PlannerColors.mutedLight,
+                        )
+                    }
+                    AnimatedVisibility(visible = isExpanded) {
+                        Column {
+                            HorizontalDivider(color = PlannerColors.divider)
+                            items.forEachIndexed { index, shopItem ->
+                                ShoppingRow(shopItem, onToggle = { viewModel.setDone(shopItem, it) })
+                                if (index != items.lastIndex) HorizontalDivider(color = PlannerColors.divider)
+                            }
+                        }
                     }
                 }
             }
