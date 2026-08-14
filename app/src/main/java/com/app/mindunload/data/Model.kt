@@ -26,9 +26,10 @@ enum class CaptureStatus { TRANSCRIBING, PENDING, PROCESSING, DONE, FAILED }
  * CAPTURE = capturing/commands (structured output), ASK = queries/summaries
  * (tasks by topic, appointments, goals, knowledge, day planning), REVIEW =
  * retrospective over a period, RESEARCH = web research on a free topic, savable
- * as a knowledge entry.
+ * as a knowledge entry, STRUCTURE = turns a (typically long, spoken) stream of
+ * thought into a structured Markdown note, also savable as a knowledge entry.
  */
-enum class ChatMode { CAPTURE, ASK, REVIEW, RESEARCH }
+enum class ChatMode { CAPTURE, ASK, REVIEW, RESEARCH, STRUCTURE }
 
 /** What is attached to a chat message besides its text — see [CaptureRequest.attachmentPath]. */
 enum class AttachmentKind { NONE, IMAGE, AUDIO }

@@ -79,9 +79,11 @@
     <string name="chat_mode_ask">Ask</string>
     <string name="chat_mode_review">Review</string>
     <string name="chat_mode_research">Research</string>
+    <string name="chat_mode_structure">Thoughts</string>
     <string name="chat_hint_ask">e.g. tasks on a topic, day plan, knowledge</string>
     <string name="chat_hint_review">e.g. review of the last week/month/year</string>
     <string name="chat_hint_research">e.g. tire pressure Golf VII winter tires</string>
+    <string name="chat_hint_structure">Speak or type a longer thought — it comes back structured</string>
     <string name="chat_research_save">Save as knowledge</string>
     <string name="chat_research_saved">Saved as a knowledge entry.</string>
     <string name="voice_record_failed">Recording could not be started.</string>
@@ -149,6 +151,12 @@
     <string name="shopping_subtitle">%1$d lists · %2$d open</string>
     <string name="shopping_empty">Your shopping lists are empty.</string>
     <string name="shopping_default_list">Shopping</string>
+    <plurals name="shopping_list_open_count">
+        <item quantity="one">%d open</item>
+        <item quantity="other">%d open</item>
+    </plurals>
+    <string name="shopping_list_expand">Show list</string>
+    <string name="shopping_list_collapse">Hide list</string>
 
     <string name="knowledge_subtitle">Your second brain · %d entries</string>
     <string name="knowledge_searching">Searching your knowledge…</string>

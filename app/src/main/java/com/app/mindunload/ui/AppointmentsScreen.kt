@@ -1,6 +1,7 @@
 package com.app.mindunload.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -83,8 +84,14 @@ fun AppointmentsScreen(
         .takeWhile { it <= month.atEndOfMonth().with(DayOfWeek.MONDAY) }
         .toList()
 
-    // Collapsed by default, and a month switch starts over — so the tab always opens compact.
-    val expanded = remember(month) { mutableStateMapOf<LocalDate, Boolean>() }
+    val currentWeekStart = today.with(DayOfWeek.MONDAY)
+    // Collapsed by default, and a month switch starts over — except the current week,
+    // which opens by itself so the tab is immediately useful without tapping anything.
+    val expanded = remember(month) {
+        mutableStateMapOf<LocalDate, Boolean>().apply {
+            if (month == YearMonth.now()) put(currentWeekStart, true)
+        }
+    }
     var pendingDelete by remember { mutableStateOf<PlannerItem?>(null) }
 
     LazyColumn(
@@ -130,6 +137,7 @@ fun AppointmentsScreen(
                     month = month,
                     today = today,
                     byDay = byDay,
+                    isCurrentWeek = weekStart == currentWeekStart,
                     expanded = expanded[weekStart] == true,
                     onToggle = { expanded[weekStart] = expanded[weekStart] != true },
                     onItemClick = onItemClick,
@@ -211,6 +219,7 @@ private fun WeekCard(
     month: YearMonth,
     today: LocalDate,
     byDay: Map<LocalDate, List<PlannerItem>>,
+    isCurrentWeek: Boolean,
     expanded: Boolean,
     onToggle: () -> Unit,
     onItemClick: (Long) -> Unit,
@@ -228,7 +237,14 @@ private fun WeekCard(
 
     Card(
         Modifier.fillMaxWidth(),
+        // Same white background as every other week tile — the current week is marked
+        // only by the border below, dezent enough not to look like a different card type.
         colors = CardDefaults.cardColors(containerColor = PlannerColors.surface),
+        border = if (isCurrentWeek) {
+            BorderStroke(1.dp, PlannerColors.primary.copy(alpha = 0.3f))
+        } else {
+            null
+        },
     ) {
         Column {
             Row(

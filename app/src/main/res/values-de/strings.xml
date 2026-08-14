@@ -79,9 +79,11 @@
     <string name="chat_mode_ask">Fragen</string>
     <string name="chat_mode_review">Rückblick</string>
     <string name="chat_mode_research">Recherche</string>
+    <string name="chat_mode_structure">Gedanken</string>
     <string name="chat_hint_ask">z.B. Aufgaben zu einem Thema, Tagesplan, Wissen</string>
     <string name="chat_hint_review">z.B. Rückblick auf die letzte Woche/Monat/Jahr</string>
     <string name="chat_hint_research">z.B. Reifendruck Golf VII Winterreifen</string>
+    <string name="chat_hint_structure">Sprich oder tippe einen längeren Gedanken — er kommt strukturiert zurück</string>
     <string name="chat_research_save">Als Wissen speichern</string>
     <string name="chat_research_saved">Als Wissen gespeichert.</string>
     <string name="voice_record_failed">Aufnahme konnte nicht gestartet werden.</string>
@@ -149,6 +151,12 @@
     <string name="shopping_subtitle">%1$d Listen · %2$d offen</string>
     <string name="shopping_empty">Deine Einkaufslisten sind leer.</string>
     <string name="shopping_default_list">Einkauf</string>
+    <plurals name="shopping_list_open_count">
+        <item quantity="one">%d offen</item>
+        <item quantity="other">%d offen</item>
+    </plurals>
+    <string name="shopping_list_expand">Liste aufklappen</string>
+    <string name="shopping_list_collapse">Liste zuklappen</string>
 
     <string name="knowledge_subtitle">Dein zweites Gehirn · %d Einträge</string>
     <string name="knowledge_searching">Suche in deinem Wissen…</string>

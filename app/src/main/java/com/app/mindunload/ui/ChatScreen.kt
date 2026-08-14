@@ -271,6 +271,7 @@ fun ChatScreen(onOpenDrawer: () -> Unit, viewModel: ChatViewModel = viewModel())
                     ChatMode.ASK -> R.string.chat_hint_ask
                     ChatMode.REVIEW -> R.string.chat_hint_review
                     ChatMode.RESEARCH -> R.string.chat_hint_research
+                    ChatMode.STRUCTURE -> R.string.chat_hint_structure
                 }
                 OutlinedTextField(
                     value = input,
@@ -538,6 +539,7 @@ private fun modeLabelRes(mode: ChatMode): Int = when (mode) {
     ChatMode.ASK -> R.string.chat_mode_ask
     ChatMode.REVIEW -> R.string.chat_mode_review
     ChatMode.RESEARCH -> R.string.chat_mode_research
+    ChatMode.STRUCTURE -> R.string.chat_mode_structure
 }
 
 /**
@@ -698,9 +700,10 @@ private fun ChatBubbles(
                         json.optJSONArray("sources")?.takeIf { it.length() > 0 }?.let {
                             ResearchSources(it)
                         }
-                        // Research is the only free topic without an entry of its own —
-                        // it becomes durable knowledge only if the user wants it to.
-                        if (capture.mode == ChatMode.RESEARCH) {
+                        // Research and structured-thought answers are free text without an
+                        // entry of their own — they become durable knowledge only if the
+                        // user wants them to.
+                        if (capture.mode == ChatMode.RESEARCH || capture.mode == ChatMode.STRUCTURE) {
                             if (json.has("savedItemId")) {
                                 Text(
                                     stringResource(R.string.chat_research_saved),
