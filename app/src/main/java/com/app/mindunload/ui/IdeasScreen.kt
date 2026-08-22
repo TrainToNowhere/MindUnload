@@ -78,15 +78,15 @@ fun IdeasScreen(
                             idea.title,
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
                             textDecoration = if (idea.done) TextDecoration.LineThrough else null,
-                            color = if (idea.done) PlannerColors.faint else PlannerColors.text,
+                            color = animateDoneColor(isDone = idea.done, base = PlannerColors.text).value,
                         )
                         CardMetaRow(idea)
                     }
                 }
             }
-            if (ideas.isEmpty()) Text(
-                stringResource(R.string.ideas_empty),
-                color = PlannerColors.faint
+            if (ideas.isEmpty()) EmptyState(
+                message = stringResource(R.string.ideas_empty),
+                icon = { IdeasIcon(tint = PlannerColors.faint) },
             )
         }
     }

@@ -23,7 +23,7 @@ class BriefingWorker(context: Context, params: WorkerParameters) :
     override suspend fun doWork(): Result {
         val app = applicationContext as PlannerApp
         val repo = app.repository
-        val claude = app.claudeService
+        val claude = app.aiService
         val settings = app.settings
 
         // Roll recurring entries forward first so the briefing sees the new occurrences.

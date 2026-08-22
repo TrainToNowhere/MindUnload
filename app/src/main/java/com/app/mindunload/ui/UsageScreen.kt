@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.foundation.isSystemInDarkTheme
 import com.app.mindunload.R
 import com.app.mindunload.ui.theme.PlannerColors
 import java.util.Locale
@@ -43,6 +44,14 @@ fun UsageScreen(onBack: () -> Unit, viewModel: UsageViewModel = viewModel()) {
     val budget by viewModel.budgetUsd.collectAsState()
     val totalCost = rows.sumOf { it.costUsd }
     val totalCalls = rows.sumOf { it.calls }
+
+    // Same hero-panel switch as in TodayScreen: the dark-card panel disappears against
+    // backgroundDark, so it gets a lighter variant in dark mode. Read once per draw —
+    // the call doesn't recompose on its own.
+    val darkMode = isSystemInDarkTheme()
+    val heroBg = if (darkMode) PlannerColors.darkCardDarkMode else PlannerColors.darkCard
+    val heroOn = if (darkMode) PlannerColors.onDarkCardDarkMode else PlannerColors.onDarkCard
+    val heroMuted = if (darkMode) PlannerColors.darkCardMutedDarkMode else PlannerColors.darkCardMuted
 
     Column(
         Modifier
@@ -68,24 +77,24 @@ fun UsageScreen(onBack: () -> Unit, viewModel: UsageViewModel = viewModel()) {
                 .fillMaxWidth()
                 .padding(top = 16.dp)
                 .clip(RoundedCornerShape(18.dp))
-                .background(PlannerColors.darkCard)
+                .background(heroBg)
                 .padding(18.dp),
         ) {
             Text(
                 stringResource(R.string.usage_month_section).uppercase(),
                 style = MaterialTheme.typography.labelSmall,
-                color = PlannerColors.darkCardMuted,
+                color = heroMuted,
             )
             Text(
                 formatUsd(totalCost),
                 style = MaterialTheme.typography.headlineMedium,
-                color = PlannerColors.onDarkCard,
+                color = heroOn,
                 modifier = Modifier.padding(top = 6.dp),
             )
             Text(
                 stringResource(R.string.usage_of_budget, formatUsd(budget.toDouble())),
                 style = MaterialTheme.typography.bodySmall,
-                color = PlannerColors.darkCardMuted,
+                color = heroMuted,
             )
             LinearProgressIndicator(
                 progress = {
@@ -99,13 +108,13 @@ fun UsageScreen(onBack: () -> Unit, viewModel: UsageViewModel = viewModel()) {
             Text(
                 stringResource(R.string.usage_remaining, formatUsd(remaining)),
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (remaining < 0) PlannerColors.soon else PlannerColors.onDarkCard,
+                color = if (remaining < 0) PlannerColors.soon else heroOn,
                 modifier = Modifier.padding(top = 8.dp),
             )
             Text(
                 stringResource(R.string.usage_calls, totalCalls),
                 style = MaterialTheme.typography.bodySmall,
-                color = PlannerColors.darkCardMuted,
+                color = heroMuted,
             )
         }
 
@@ -122,7 +131,10 @@ fun UsageScreen(onBack: () -> Unit, viewModel: UsageViewModel = viewModel()) {
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 if (rows.isEmpty()) {
-                    Text(stringResource(R.string.usage_empty), color = PlannerColors.faint)
+                    EmptyState(
+                        message = stringResource(R.string.usage_empty),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
                 rows.forEachIndexed { index, row ->
                     if (index > 0) HorizontalDivider(color = PlannerColors.divider)

@@ -23,10 +23,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import com.app.mindunload.R
 import com.app.mindunload.data.PlannerItem
 import com.app.mindunload.data.Priority
+import com.app.mindunload.ui.theme.HitTarget
 import com.app.mindunload.ui.theme.PlannerColors
+import com.app.mindunload.ui.theme.Radius
+import com.app.mindunload.ui.theme.Spacing
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -39,15 +44,21 @@ import java.util.Locale
 fun ScreenHeader(title: String, subtitle: String?, onOpenDrawer: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.l)
     ) {
         OutlinedButton(
             onClick = onOpenDrawer,
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(Radius.md),
             border = BorderStroke(1.dp, PlannerColors.outline),
             colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = PlannerColors.surface),
+            // Zero padding is required, not optional: M3's default (24×8 dp) would eat
+            // a 34 dp button whole and clip the icon canvas to a single dot — that's
+            // exactly what this build first showed.
             contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
-            modifier = Modifier.size(40.dp),
+            // Compact on purpose: this button sits beside the title and shares a row,
+            // a full 48 dp pushes the title off-screen on narrow phones. Surrounding
+            // Spacing.l provides the touch slop that the M3 minimum usually covers.
+            modifier = Modifier.size(HitTarget.compactHeader),
         ) {
             MenuIcon(tint = PlannerColors.muted)
         }
@@ -58,6 +69,8 @@ fun ScreenHeader(title: String, subtitle: String?, onOpenDrawer: () -> Unit) {
                 color = PlannerColors.text,
             )
             if (subtitle != null) {
+                // 2 dp, not [Spacing.xs] — reserved for "no perceptible gap" between a
+                // heading and its helper line.
                 Spacer(Modifier.size(2.dp))
                 Text(
                     subtitle,
@@ -90,6 +103,8 @@ fun SectionLabel(text: String) {
         text.uppercase(),
         style = MaterialTheme.typography.labelSmall,
         color = PlannerColors.muted,
+        // Mirrors the 2 dp "no gap" reservation in [ScreenHeader]. Labels align with
+        // the column edge; a real spacing token would create visible misalignment.
         modifier = Modifier.padding(horizontal = 2.dp),
     )
 }
@@ -169,6 +184,10 @@ fun formatRelativeDue(epochMillis: Long, now: LocalDate = LocalDate.now()): Stri
  * The line every card closes with: category, priority, due date/time and recurrence on the
  * left, the creation date on the right. Shared by all lists so the cards read identically —
  * the title area above stays free of metadata.
+ *
+ * When [item] is overdue and not [PlannerItem.done], the plain "überfällig seit …" text
+ * is *replaced* by a [StatusBadge]; the rest of the metadata flows in the same row, so
+ * the card height does not change and no callsite needs to know.
  */
 @Composable
 fun CardMetaRow(
@@ -178,11 +197,19 @@ fun CardMetaRow(
     /** Off on the category screen — there every card carries the same category. */
     showCategory: Boolean = true,
 ) {
+    val zone = ZoneId.systemDefault()
+    val today = LocalDate.now()
+    // Pull the overdue decision up here so we don't re-compute it twice (once for the
+    // plain meta list, once for the badge).
+    val isOverdue = !item.done && item.dueAt != null &&
+            Instant.ofEpochMilli(item.dueAt).atZone(zone).toLocalDate().isBefore(today)
     val meta = buildList {
         if (showListName) item.listName?.let { add(it) }
         if (showCategory) item.category?.let { add(it) }
         if (item.priority != Priority.NONE) add(priorityLabel(item.priority))
-        item.dueAt?.let { add(formatRelativeDue(it)) }
+        // Replace the plain "überfällig seit …" with the StatusBadge *only* when overdue;
+        // otherwise keep the existing relative-due text untouched.
+        if (item.dueAt != null && !isOverdue) add(formatRelativeDue(item.dueAt))
         item.recurrence?.let { add("↻ " + recurrenceLabel(it)) }
         // The AI's auto-research suggestion: a subtle hint in the list.
         if (item.researchSuggested && !item.done) add(stringResource(R.string.research_badge))
@@ -190,22 +217,40 @@ fun CardMetaRow(
     Row(
         modifier
             .fillMaxWidth()
+            // 6 dp (not [Spacing.s]) — the meta line lives inside a card already padded
+            // by [Spacing.l]; a real token-width gap stacks visually.
             .padding(top = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Bottom,
     ) {
-        // fill = false: without metadata the row collapses and the date still sits right.
-        Text(
-            meta,
-            style = MaterialTheme.typography.bodySmall,
-            color = PlannerColors.mutedLight,
+        // [weight(1f, fill = false)] lets the meta shrink to fit, while the right-hand
+        // creation-date Text always lands at its natural width on the right. The badge
+        // lives *before* the plain meta, so for a single overdue task the line reads as:
+        // [ÜBERFÄLLIG] [· category · priority · research]
+        Row(
             modifier = Modifier.weight(1f, fill = false),
-        )
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (isOverdue) {
+                StatusBadge(
+                    text = stringResource(R.string.status_overdue),
+                    kind = StatusKind.OVERDUE,
+                    modifier = Modifier.padding(end = 6.dp),
+                )
+            }
+            if (meta.isNotBlank()) {
+                Text(
+                    meta,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PlannerColors.mutedLight,
+                )
+            }
+        }
         Text(
             formatDateTime(item.createdAt).substringBefore(" "),
             style = MaterialTheme.typography.bodySmall,
             color = PlannerColors.faint,
-            modifier = Modifier.padding(start = 8.dp),
+            modifier = Modifier.padding(start = Spacing.s),
         )
     }
 }
@@ -226,7 +271,7 @@ fun ItemRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(Spacing.l),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Checkbox(checked = item.done, onCheckedChange = onToggleDone)
@@ -238,10 +283,33 @@ fun ItemRow(
                     },
                     style = MaterialTheme.typography.bodyLarge,
                     textDecoration = if (item.done) TextDecoration.LineThrough else null,
-                    color = if (item.done) PlannerColors.faint else PlannerColors.text,
+                    // Animated: a slow fade into the "done" colour marks the change as
+                    // intentional, which a snap-replace does not — the user just tapped
+                    // a checkbox and the row went half-dead instantly otherwise.
+                    color = animateDoneColor(
+                        isDone = item.done,
+                        base = PlannerColors.text,
+                    ).value,
                 )
                 CardMetaRow(item, showListName = showListName)
             }
         }
     }
 }
+
+/**
+ * Fades a foreground colour into [PlannerColors.faint] when [isDone] is true and back to
+ * [base] otherwise. Centralised so every list uses the same 180 ms timing — a half-second
+ * fade reads as sluggish on a checkbox tap.
+ *
+ * Returns a [State] (use `.value` at the call site) so callers stay backwards-compatible
+ * with the [androidx.compose.ui.graphics.Color] parameter they previously passed to
+ * `color =` on [androidx.compose.material3.Text] etc.
+ */
+@Composable
+fun animateDoneColor(isDone: Boolean, base: androidx.compose.ui.graphics.Color): androidx.compose.runtime.State<androidx.compose.ui.graphics.Color> =
+    animateColorAsState(
+        targetValue = if (isDone) PlannerColors.faint else base,
+        animationSpec = tween(durationMillis = 180),
+        label = "done-color",
+    )

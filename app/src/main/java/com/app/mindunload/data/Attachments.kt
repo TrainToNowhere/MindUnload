@@ -16,7 +16,7 @@ import java.util.UUID
  */
 object Attachments {
 
-    /** Long edge of a stored photo. Above this Claude gains no detail, only tokens. */
+    /** Long edge of a stored photo. Above this the model gains no detail, only tokens. */
     private const val MAX_EDGE = 1568
 
     private fun dir(context: Context): File =
@@ -39,7 +39,7 @@ object Attachments {
         target.absolutePath
     }.getOrNull()
 
-    /** Media type of a stored attachment for the Claude image block. */
+    /** Media type of a stored attachment for the image content block. */
     const val IMAGE_MEDIA_TYPE = "image/jpeg"
 
     fun delete(path: String?) {

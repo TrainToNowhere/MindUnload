@@ -21,7 +21,7 @@
     <string name="drawer_knowledge">Knowledge</string>
     <string name="drawer_ideas">Ideas</string>
     <string name="drawer_goals">Goals</string>
-    <string name="drawer_categories">Categories · created by Claude</string>
+    <string name="drawer_categories">Categories · auto-created</string>
 
     <string name="today_greeting">Good day.</string>
     <string name="briefing_label">Morning briefing</string>
@@ -48,7 +48,7 @@
     <string name="review_generating">Looking back…</string>
     <string name="review_empty">Nothing recorded in this period yet.</string>
     <string name="research_badge">Research worthwhile</string>
-    <string name="research_suggested_hint">Claude thinks research would pay off here.</string>
+    <string name="research_suggested_hint">Research would pay off here.</string>
     <string name="action_import">Import JSON data</string>
     <string name="import_done">Imported: %1$d entries, %2$d links.</string>
     <string name="import_failed">Import failed</string>
@@ -98,7 +98,7 @@
     <string name="settings_speech_ready">On-device speech recognition is ready.</string>
     <string name="settings_speech_unavailable">Speech recognition unavailable on this device: %1$s</string>
     <string name="status_transcription_timeout">Transcription took too long and was stopped.</string>
-    <string name="chat_image_attached">Photo attached — Claude reads its text.</string>
+    <string name="chat_image_attached">Photo attached — its text will be read out.</string>
     <string name="image_no_text">(No legible text on the photo.)</string>
     <string name="status_transcribing">Transcribing voice message…</string>
     <string name="status_transcription_failed">Voice message could not be transcribed.</string>
@@ -184,6 +184,7 @@
     <string name="research_promote">Save as wiki article</string>
 
     <string name="due_overdue_since">overdue since %1$s</string>
+    <string name="status_overdue">overdue</string>
     <string name="due_today">today</string>
     <string name="due_tomorrow">tomorrow</string>
 
@@ -202,11 +203,14 @@
     <string name="research_failed">Research failed</string>
 
     <string name="settings_headline">Settings</string>
-    <string name="settings_api_key_section">Anthropic API key</string>
+    <string name="settings_api_key_section">OpenRouter API key</string>
+    <string name="settings_key_hint">Get a key at openrouter.ai/keys. OpenRouter gives access to models from Anthropic, OpenAI, Google and others through one API.</string>
     <string name="settings_key_present">API key is configured.</string>
     <string name="settings_key_missing">No API key configured — capture processing and research will not work.</string>
-    <string name="settings_key_label">API key (sk-ant-…)</string>
+    <string name="settings_key_label">API key (sk-or-…)</string>
     <string name="settings_key_saved">Saved.</string>
+    <string name="settings_model_pick_title">Choose a model</string>
+    <string name="settings_model_load_failed">Could not load the model list: %1$s</string>
     <string name="settings_briefing_time">Daily notification at %1$s</string>
     <string name="settings_briefing_change">Change time</string>
     <string name="settings_export_section">Data export</string>

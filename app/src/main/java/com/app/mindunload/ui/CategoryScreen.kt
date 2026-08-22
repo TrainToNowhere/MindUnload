@@ -30,7 +30,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.mindunload.R
 import com.app.mindunload.ui.theme.PlannerColors
 
-/** All entries of a (Claude-assigned) category, across all types. */
+/** All entries of a (model-assigned) category, across all types. */
 @Composable
 fun CategoryScreen(
     name: String,
@@ -78,7 +78,11 @@ fun CategoryScreen(
                                 fontWeight = FontWeight.SemiBold,
                                 textDecoration = if (item.done) TextDecoration.LineThrough else null,
                             ),
-                            color = if (item.done) PlannerColors.faint else androidx.compose.ui.graphics.Color.Unspecified,
+                            // Color.Unspecified can't be animated into (no endpoints),
+                            // so the done-state hint lives only in the strikethrough
+                            // and fontWeight reduction — keeps the look stable across
+                            // both states instead of forcing an arbitrary target colour.
+                            color = androidx.compose.ui.graphics.Color.Unspecified,
                         )
                         item.notes?.let {
                             Text(
@@ -92,9 +96,9 @@ fun CategoryScreen(
                     }
                 }
             }
-            if (items.isEmpty()) Text(
-                stringResource(R.string.category_empty),
-                color = PlannerColors.faint
+            if (items.isEmpty()) EmptyState(
+                message = stringResource(R.string.category_empty),
+                icon = { KnowledgeIcon(tint = PlannerColors.faint) },
             )
         }
     }

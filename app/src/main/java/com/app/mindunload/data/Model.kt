@@ -150,7 +150,7 @@ data class ApiUsage(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     /** Which feature triggered the call (e.g. "parseCommand", "generateBriefing"). */
     val feature: String,
-    /** Model id of the call (e.g. "claude-haiku-4-5"). */
+    /** Model id of the call (e.g. "anthropic/claude-haiku-4.5"). */
     val model: String,
     val inputTokens: Long,
     val cacheWriteTokens: Long,

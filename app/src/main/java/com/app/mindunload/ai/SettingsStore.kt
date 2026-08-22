@@ -19,10 +19,26 @@ class SettingsStore(context: Context) {
         )
     }
 
+    /** OpenRouter API key (https://openrouter.ai/keys) — all AI calls go through OpenRouter. */
     var apiKey: String?
         get() = prefs.getString(KEY_API_KEY, null)?.takeIf { it.isNotBlank() }
         set(value) {
             prefs.edit { putString(KEY_API_KEY, value?.trim()) }
+        }
+
+    /** OpenRouter model id used for structuring/parsing/quick answers, e.g. "anthropic/claude-haiku-4.5". */
+    var fastModel: String
+        get() = prefs.getString(KEY_FAST_MODEL, OpenRouterModels.DEFAULT_FAST) ?: OpenRouterModels.DEFAULT_FAST
+        set(value) {
+            prefs.edit { putString(KEY_FAST_MODEL, value) }
+        }
+
+    /** OpenRouter model id used for research/review, e.g. "anthropic/claude-sonnet-5". */
+    var strongModel: String
+        get() = prefs.getString(KEY_STRONG_MODEL, OpenRouterModels.DEFAULT_STRONG)
+            ?: OpenRouterModels.DEFAULT_STRONG
+        set(value) {
+            prefs.edit { putString(KEY_STRONG_MODEL, value) }
         }
 
     /** ISO date (yyyy-MM-dd) for which [briefingText] was last generated. */
@@ -110,7 +126,9 @@ class SettingsStore(context: Context) {
 
     private companion object {
         const val KEY_CLEANUP_JSON = "cleanup_json"
-        const val KEY_API_KEY = "anthropic_api_key"
+        const val KEY_API_KEY = "openrouter_api_key"
+        const val KEY_FAST_MODEL = "openrouter_fast_model"
+        const val KEY_STRONG_MODEL = "openrouter_strong_model"
         const val KEY_BRIEFING_DATE = "briefing_date"
         const val KEY_BRIEFING_TEXT = "briefing_text"
         const val KEY_BRIEFING_HOUR = "briefing_hour"

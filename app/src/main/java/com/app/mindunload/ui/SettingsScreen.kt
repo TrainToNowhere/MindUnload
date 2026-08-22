@@ -3,6 +3,7 @@ package com.app.mindunload.ui
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -139,6 +141,11 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Text(
+                    stringResource(R.string.settings_key_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PlannerColors.muted,
+                )
+                Text(
                     text = if (hasKey) {
                         stringResource(R.string.settings_key_present)
                     } else {
@@ -167,19 +174,56 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(
                     Text(stringResource(R.string.action_save))
                 }
                 HorizontalDivider(color = PlannerColors.divider)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                val fastModel by viewModel.fastModel.collectAsState()
+                val strongModel by viewModel.strongModel.collectAsState()
+                val modelCatalog by viewModel.modelCatalog.collectAsState()
+                val modelCatalogLoading by viewModel.modelCatalogLoading.collectAsState()
+                val modelCatalogError by viewModel.modelCatalogError.collectAsState()
+                var pickerFor by remember { mutableStateOf<ModelRole?>(null) }
+                fun openPicker(role: ModelRole) {
+                    pickerFor = role
+                    if (modelCatalog.isEmpty()) viewModel.loadModelCatalog()
+                }
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { openPicker(ModelRole.FAST) },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Text(
                         stringResource(R.string.settings_model_parsing),
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    Tag("Haiku")
+                    Tag(com.app.mindunload.ai.OpenRouterModels.labelFor(fastModel, modelCatalog))
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { openPicker(ModelRole.STRONG) },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Text(
                         stringResource(R.string.settings_model_research),
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    Tag("Sonnet")
+                    Tag(com.app.mindunload.ai.OpenRouterModels.labelFor(strongModel, modelCatalog))
+                }
+                pickerFor?.let { role ->
+                    ModelPickerDialog(
+                        selected = if (role == ModelRole.FAST) fastModel else strongModel,
+                        catalog = modelCatalog,
+                        loading = modelCatalogLoading,
+                        error = modelCatalogError,
+                        onRetry = { viewModel.loadModelCatalog() },
+                        onSelect = {
+                            if (role == ModelRole.FAST) viewModel.setFastModel(it)
+                            else viewModel.setStrongModel(it)
+                            pickerFor = null
+                        },
+                        onDismiss = { pickerFor = null },
+                    )
                 }
             }
         }
@@ -479,6 +523,84 @@ private fun BriefingTimeDialog(
             }
         },
         text = { androidx.compose.material3.TimePicker(state = state) },
+    )
+}
+
+private enum class ModelRole { FAST, STRONG }
+
+/**
+ * Picks one OpenRouter model (provider + model in one entry) from the live catalog fetched
+ * via [com.app.mindunload.ai.OpenRouterModels.fetchCatalog] — loading/error state is passed
+ * in from [SettingsViewModel] so both role pickers share one fetch.
+ */
+@Composable
+private fun ModelPickerDialog(
+    selected: String,
+    catalog: List<com.app.mindunload.ai.OpenRouterModel>,
+    loading: Boolean,
+    error: String?,
+    onRetry: () -> Unit,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+        title = { Text(stringResource(R.string.settings_model_pick_title)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                when {
+                    loading -> Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            modifier = Modifier.size(28.dp),
+                        )
+                    }
+
+                    error != null -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            stringResource(R.string.settings_model_load_failed, error),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = PlannerColors.overdue,
+                        )
+                        OutlinedButton(onClick = onRetry) {
+                            Text(stringResource(R.string.action_retry))
+                        }
+                    }
+
+                    else -> {
+                        var currentProvider = ""
+                        catalog.forEach { model ->
+                            if (model.provider != currentProvider) {
+                                currentProvider = model.provider
+                                SectionLabel(model.provider)
+                            }
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSelect(model.id) }
+                                    .padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                RadioButton(
+                                    selected = model.id == selected,
+                                    onClick = { onSelect(model.id) },
+                                )
+                                Text(model.label, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                }
+            }
+        },
     )
 }
 

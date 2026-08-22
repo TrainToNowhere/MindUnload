@@ -61,9 +61,9 @@ fun GoalsScreen(
 
         Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             goals.forEach { goal -> GoalCard(goal, viewModel, onClick = { onItemClick(goal.id) }) }
-            if (goals.isEmpty()) Text(
-                stringResource(R.string.goals_empty),
-                color = PlannerColors.faint
+            if (goals.isEmpty()) EmptyState(
+                message = stringResource(R.string.goals_empty),
+                icon = { GoalsIcon(tint = PlannerColors.faint) },
             )
         }
     }
@@ -94,7 +94,7 @@ private fun GoalCard(goal: PlannerItem, viewModel: ItemsViewModel, onClick: () -
                 goal.title,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
                 textDecoration = if (goal.done) TextDecoration.LineThrough else null,
-                color = if (goal.done) PlannerColors.faint else PlannerColors.text,
+                color = animateDoneColor(isDone = goal.done, base = PlannerColors.text).value,
             )
             goal.notes?.let {
                 Text(

@@ -9,9 +9,9 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import com.anthropic.errors.AnthropicServiceException
 import com.app.mindunload.PlannerApp
 import com.app.mindunload.R
+import com.app.mindunload.ai.AiServiceException
 import com.app.mindunload.ai.BacklogTools
 import com.app.mindunload.ai.MissingApiKeyException
 import com.app.mindunload.ai.ParsedAction
@@ -43,7 +43,7 @@ import java.time.Duration
 private const val STRUCTURE_HISTORY_LIMIT = 8
 
 /**
- * Outbox processing: takes PENDING/FAILED captures, has Claude structure them
+ * Outbox processing: takes PENDING/FAILED captures, has the model structure them
  * and saves items + link suggestions. Runs with a network constraint and backoff —
  * capturing therefore never fails, only the processing waits.
  */
@@ -52,7 +52,7 @@ class CaptureWorker(context: Context, params: WorkerParameters) : CoroutineWorke
     override suspend fun doWork(): Result {
         val app = applicationContext as PlannerApp
         val repo = app.repository
-        val claude = app.claudeService
+        val claude = app.aiService
 
         // Targeted backlog access for the tool loop: the model searches itself
         // (all types, including completed) instead of getting the whole backlog in the prompt.
@@ -177,15 +177,15 @@ class CaptureWorker(context: Context, params: WorkerParameters) : CoroutineWorke
                     repo.captureDao.setStatus(pending.id, CaptureStatus.PENDING)
                 }
                 throw e
-            } catch (e: AnthropicServiceException) {
+            } catch (e: AiServiceException) {
                 repo.captureDao.setStatus(
                     pending.id,
                     CaptureStatus.FAILED,
-                    "${e.statusCode()}: ${e.message}"
+                    "${e.statusCode}: ${e.message}"
                 )
                 // 4xx (except 408/429) is permanent — auto-retry would only drive up
                 // the backoff and block the outbox for new inputs.
-                if (e.statusCode() >= 500 || e.statusCode() == 408 || e.statusCode() == 429) {
+                if (e.statusCode >= 500 || e.statusCode == 408 || e.statusCode == 429) {
                     anyFailedRetryable = true
                 }
             } catch (e: Throwable) {
@@ -203,7 +203,7 @@ class CaptureWorker(context: Context, params: WorkerParameters) : CoroutineWorke
     }
 
     /**
-     * Photo message → text. Reads the stored JPEG, has Claude transcribe it and writes the
+     * Photo message → text. Reads the stored JPEG, has the model transcribe it and writes the
      * result back into the capture, so the chat bubble shows what is actually being
      * processed. A caption typed alongside the photo stays in front of it — it is the
      * instruction ("auf die Einkaufsliste"), the extracted text is the material.
@@ -213,7 +213,7 @@ class CaptureWorker(context: Context, params: WorkerParameters) : CoroutineWorke
      */
     private suspend fun extractImageText(
         repo: PlannerRepository,
-        claude: com.app.mindunload.ai.ClaudeService,
+        claude: com.app.mindunload.ai.AiService,
         capture: com.app.mindunload.data.CaptureRequest,
     ): com.app.mindunload.data.CaptureRequest {
         if (capture.attachmentKind != AttachmentKind.IMAGE || capture.attachmentExtracted) {
@@ -242,7 +242,7 @@ class CaptureWorker(context: Context, params: WorkerParameters) : CoroutineWorke
      */
     private suspend fun chatAnswer(
         repo: PlannerRepository,
-        claude: com.app.mindunload.ai.ClaudeService,
+        claude: com.app.mindunload.ai.AiService,
         research: com.app.mindunload.ai.ResearchService,
         backlogTools: BacklogTools,
         capture: com.app.mindunload.data.CaptureRequest,
@@ -258,7 +258,7 @@ class CaptureWorker(context: Context, params: WorkerParameters) : CoroutineWorke
     /** The free-text chat functions that answer from the user's own data. */
     private suspend fun chatText(
         repo: PlannerRepository,
-        claude: com.app.mindunload.ai.ClaudeService,
+        claude: com.app.mindunload.ai.AiService,
         backlogTools: BacklogTools,
         capture: com.app.mindunload.data.CaptureRequest,
     ): String = when (capture.mode) {

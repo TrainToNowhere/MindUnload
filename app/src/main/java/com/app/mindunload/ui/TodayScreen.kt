@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.mindunload.R
 import com.app.mindunload.ui.theme.PlannerColors
+import androidx.compose.foundation.isSystemInDarkTheme
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
@@ -52,11 +53,20 @@ fun TodayScreen(
     val weekday = today.dayOfWeek.getDisplayName(TextStyle.FULL, locale)
     val dateLabel = "$weekday, ${today.format(DateTimeFormatter.ofPattern("d. MMMM", locale))}"
 
+    // Hero-panel colors. The briefing sits on the "dark card" surface in both modes —
+    // but that color is fixed (#2E3B33). Under dark theme it sat too close to the page
+    // background, so the panel vanished. These locals switch once per recomposition;
+    // they don't read state, so this is a single condition per draw.
+    val darkMode = isSystemInDarkTheme()
+    val heroBg = if (darkMode) PlannerColors.darkCardDarkMode else PlannerColors.darkCard
+    val heroOn = if (darkMode) PlannerColors.onDarkCardDarkMode else PlannerColors.onDarkCard
+    val heroMuted = if (darkMode) PlannerColors.darkCardMutedDarkMode else PlannerColors.darkCardMuted
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(20.dp, 18.dp, 20.dp, 24.dp),
+            .padding(20.dp, 8.dp, 20.dp, 24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         ScreenHeader(
@@ -70,26 +80,26 @@ fun TodayScreen(
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .background(PlannerColors.darkCard)
+                .background(heroBg)
                 .padding(20.dp),
         ) {
             Text(
                 stringResource(R.string.briefing_label).uppercase(),
                 style = MaterialTheme.typography.labelSmall,
-                color = PlannerColors.darkCardMuted,
+                color = heroMuted,
             )
             if (briefing != null) {
                 Text(
                     briefing!!,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = PlannerColors.onDarkCard,
+                    color = heroOn,
                     modifier = Modifier.padding(top = 10.dp),
                 )
             } else if (!generating) {
                 Text(
                     stringResource(R.string.briefing_none),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = PlannerColors.onDarkCard,
+                    color = heroOn,
                     modifier = Modifier.padding(top = 10.dp),
                 )
             }
@@ -97,11 +107,11 @@ fun TodayScreen(
                 Row(modifier = Modifier.padding(top = 10.dp)) {
                     CircularProgressIndicator(
                         modifier = Modifier.padding(end = 8.dp),
-                        color = PlannerColors.onDarkCard,
+                        color = heroOn,
                     )
                     Text(
                         stringResource(R.string.briefing_generating),
-                        color = PlannerColors.onDarkCard
+                        color = heroOn
                     )
                 }
             } else if (briefing == null) {
@@ -126,12 +136,7 @@ fun TodayScreen(
         Column {
             SectionLabel(stringResource(R.string.today_section))
             if (appointments.isEmpty()) {
-                Text(
-                    stringResource(R.string.today_no_appointments),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = PlannerColors.faint,
-                    modifier = Modifier.padding(top = 8.dp, start = 2.dp),
-                )
+                SmallEmptyHint(stringResource(R.string.today_no_appointments))
             } else {
                 Column(
                     modifier = Modifier.padding(top = 8.dp),
