@@ -21,7 +21,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Weekly cleanup: has Claude check the backlog for duplicates, long-completed and
+ * Weekly cleanup: has the model check the backlog for duplicates, long-completed and
  * outdated entries. The suggestions are stored as JSON in the settings and shown
  * in the Today tab for confirmation (apply/ignore) — nothing is deleted
  * automatically.
@@ -35,7 +35,7 @@ class CleanupWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         if (items.size < 5) return Result.success()
 
         val suggestions = try {
-            app.claudeService.suggestCleanup(items)
+            app.aiService.suggestCleanup(items)
         } catch (e: MissingApiKeyException) {
             return Result.failure()
         } catch (e: Throwable) {

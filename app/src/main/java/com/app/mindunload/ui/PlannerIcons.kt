@@ -10,11 +10,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import com.app.mindunload.ui.theme.IconSize
 
 /**
  * Small line icons following the stroke paths from the Claude design prototype
  * ("Alltagsplaner Prototyp v2"), as Canvas instead of ImageVector — more robust than
  * hand-derived Bezier paths, same look (round strokes, 24x24 grid).
+ *
+ * The 24x24 design grid is fixed ([GRID]); rendered size and stroke come from
+ * [IconSize] so every icon stays visually consistent.
  */
 private const val GRID = 24f
 
@@ -22,10 +26,10 @@ private const val GRID = 24f
 private fun IconCanvas(
     modifier: Modifier,
     tint: Color,
-    strokeWidthDp: Float = 1.9f,
+    strokeWidthDp: Float = IconSize.stroke,
     draw: androidx.compose.ui.graphics.drawscope.DrawScope.(scale: Float, sw: Float) -> Unit,
 ) {
-    Canvas(modifier = modifier.size(21.dp)) {
+    Canvas(modifier = modifier.size(IconSize.default)) {
         val scale = size.width / GRID
         draw(scale, strokeWidthDp.dp.toPx())
     }

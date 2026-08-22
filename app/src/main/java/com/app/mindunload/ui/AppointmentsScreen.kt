@@ -99,7 +99,7 @@ fun AppointmentsScreen(
             .fillMaxSize()
             .padding(horizontal = 20.dp),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(
-            top = 18.dp,
+            top = 8.dp,
             bottom = 24.dp
         ),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -122,10 +122,9 @@ fun AppointmentsScreen(
         }
         if (byDay.isEmpty()) {
             item {
-                Text(
-                    stringResource(R.string.appointments_month_empty),
-                    color = PlannerColors.muted,
-                    modifier = Modifier.padding(top = 16.dp),
+                EmptyState(
+                    message = stringResource(R.string.appointments_month_empty),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
             return@LazyColumn
@@ -377,7 +376,12 @@ private fun DayBlock(
                 Modifier
                     .fillMaxWidth()
                     .clickable { onItemClick(appt.id) }
-                    .padding(start = 14.dp, end = 4.dp, top = 7.dp, bottom = 7.dp),
+                    // 12 dp / 12 dp vertical gives the row a comfortable 48 dp hit target
+                    // when paired with bodyLarge text plus optional subtitle. The previous
+                    // 7/7 left the row at ~36 dp — visually fine but a11y-short for talkback
+                    // and small-touch users. End padding stays tight so the trailing Trash
+                    // IconButton keeps a visible gap to the row edge.
+                    .padding(start = 14.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -386,7 +390,7 @@ private fun DayBlock(
                             .format(DateTimeFormatter.ofPattern("HH:mm"))
                     } ?: "",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (appt.done) PlannerColors.faint else PlannerColors.primary,
+                    color = animateDoneColor(isDone = appt.done, base = PlannerColors.primary).value,
                 )
                 Column(
                     Modifier

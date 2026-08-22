@@ -1,14 +1,7 @@
 package com.app.mindunload.ai
 
-import com.anthropic.models.messages.CacheControlEphemeral
-import com.anthropic.models.messages.MessageCreateParams
-import com.anthropic.models.messages.StopReason
-import com.anthropic.models.messages.WebFetchTool20260209
-import com.anthropic.models.messages.WebSearchTool20260209
 import com.app.mindunload.data.PlannerItem
 import com.app.mindunload.data.ResearchNote
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -16,13 +9,13 @@ import org.json.JSONObject
 data class ResearchResult(val summary: String, val sources: JSONArray)
 
 class ResearchService(
-    private val claude: ClaudeService,
+    private val ai: AiService,
     private val prompts: Prompts,
 ) {
 
     /**
-     * Researches a backlog topic via web search (server tools, running at Anthropic)
-     * and returns a storable [ResearchNote].
+     * Researches a backlog topic via OpenRouter's web-search plugin and returns a
+     * storable [ResearchNote].
      */
     suspend fun research(item: PlannerItem): ResearchNote {
         val prompt = buildString {
@@ -58,49 +51,9 @@ class ResearchService(
         return runResearch(prompt, "researchTopic")
     }
 
-    private suspend fun runResearch(
-        prompt: String,
-        feature: String,
-    ): ResearchResult = withContext(Dispatchers.IO) {
-        val client = claude.client()
-        var params = MessageCreateParams.builder()
-            .model(Models.RESEARCH)
-            .maxTokens(4096L)
-            .addTool(WebSearchTool20260209.builder().maxUses(3L).build())
-            // Without maxContentTokens entire web pages end up untrimmed in the context —
-            // a capped excerpt is enough for a 400-word summary.
-            .addTool(WebFetchTool20260209.builder().maxUses(2L).maxContentTokens(10_000L).build())
-            // The breakpoint moves to the end of the conversation: pause_turn continuations
-            // read the already processed search results from the cache instead of at full price.
-            .cacheControl(CacheControlEphemeral.builder().build())
-            .addUserMessage(prompt)
-            .build()
-
-        var response = client.messages().create(params)
-        logUsage(feature, response)
-        // Server tools may interrupt with pause_turn — then continue unchanged.
-        var continuations = 0
-        while (response.stopReason().orElse(null) == StopReason.PAUSE_TURN && continuations < 5) {
-            params = params.toBuilder().addMessage(response.toParam()).build()
-            response = client.messages().create(params)
-            logUsage("$feature/cont${continuations + 1}", response)
-            continuations++
-        }
-
-        // Only the text AFTER the last tool/thinking block is the actual answer —
-        // text blocks before it are interim narration ("Ich suche zunächst…"). The fragments
-        // are continuations split at citation boundaries, not lines: join without separator.
-        val content = response.content()
-        fun joinedText(blocks: List<com.anthropic.models.messages.ContentBlock>): String =
-            blocks.mapNotNull { block -> block.text().map { it.text() }.orElse(null) }
-                .joinToString("")
-
-        val lastNonText = content.indexOfLast { !it.text().isPresent }
-        val text = joinedText(content.drop(lastNonText + 1))
-            .ifBlank { joinedText(content) }
-            .ifBlank { throw IllegalStateException("Empty research result") }
-
-        ResearchResult(summary = stripSourcesSection(text), sources = extractSources(text))
+    private suspend fun runResearch(prompt: String, feature: String): ResearchResult {
+        val text = ai.researchAnswer(prompt, feature)
+        return ResearchResult(summary = stripSourcesSection(text), sources = extractSources(text))
     }
 
     /**

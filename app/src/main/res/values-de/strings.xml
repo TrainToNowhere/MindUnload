@@ -21,7 +21,7 @@
     <string name="drawer_knowledge">Wissen</string>
     <string name="drawer_ideas">Ideen</string>
     <string name="drawer_goals">Ziele</string>
-    <string name="drawer_categories">Kategorien · von Claude angelegt</string>
+    <string name="drawer_categories">Kategorien · automatisch angelegt</string>
 
     <string name="today_greeting">Guten Tag.</string>
     <string name="briefing_label">Morgen-Briefing</string>
@@ -48,7 +48,7 @@
     <string name="review_generating">Blicke zurück…</string>
     <string name="review_empty">In diesem Zeitraum ist noch nichts erfasst.</string>
     <string name="research_badge">Recherche lohnt sich</string>
-    <string name="research_suggested_hint">Claude meint: Hier würde sich eine Recherche lohnen.</string>
+    <string name="research_suggested_hint">Hier würde sich eine Recherche lohnen.</string>
     <string name="action_import">JSON-Daten importieren</string>
     <string name="import_done">Importiert: %1$d Einträge, %2$d Verknüpfungen.</string>
     <string name="import_failed">Import fehlgeschlagen</string>
@@ -98,7 +98,7 @@
     <string name="settings_speech_ready">Spracherkennung auf dem Gerät ist einsatzbereit.</string>
     <string name="settings_speech_unavailable">Spracherkennung auf diesem Gerät nicht verfügbar: %1$s</string>
     <string name="status_transcription_timeout">Umwandlung hat zu lange gedauert und wurde abgebrochen.</string>
-    <string name="chat_image_attached">Foto angehängt — Claude liest den Text aus.</string>
+    <string name="chat_image_attached">Foto angehängt — der Text wird ausgelesen.</string>
     <string name="image_no_text">(Kein lesbarer Text auf dem Foto.)</string>
     <string name="status_transcribing">Sprachnachricht wird umgewandelt…</string>
     <string name="status_transcription_failed">Sprachnachricht konnte nicht umgewandelt werden.</string>
@@ -184,6 +184,7 @@
     <string name="research_promote">Als Wiki-Artikel übernehmen</string>
 
     <string name="due_overdue_since">überfällig seit %1$s</string>
+    <string name="status_overdue">überfällig</string>
     <string name="due_today">heute</string>
     <string name="due_tomorrow">morgen</string>
 
@@ -202,11 +203,14 @@
     <string name="research_failed">Recherche fehlgeschlagen</string>
 
     <string name="settings_headline">Einstellungen</string>
-    <string name="settings_api_key_section">Anthropic API-Key</string>
+    <string name="settings_api_key_section">OpenRouter API-Key</string>
+    <string name="settings_key_hint">Einen Key gibt es auf openrouter.ai/keys. OpenRouter bietet Zugriff auf Modelle von Anthropic, OpenAI, Google und anderen über eine einzige API.</string>
     <string name="settings_key_present">API-Key ist hinterlegt.</string>
     <string name="settings_key_missing">Kein API-Key hinterlegt — Verarbeitung und Recherche funktionieren nicht.</string>
-    <string name="settings_key_label">API-Key (sk-ant-…)</string>
+    <string name="settings_key_label">API-Key (sk-or-…)</string>
     <string name="settings_key_saved">Gespeichert.</string>
+    <string name="settings_model_pick_title">Modell wählen</string>
+    <string name="settings_model_load_failed">Modellliste konnte nicht geladen werden: %1$s</string>
     <string name="settings_briefing_time">Tägliche Benachrichtigung um %1$s</string>
     <string name="settings_briefing_change">Uhrzeit ändern</string>
     <string name="settings_export_section">Datenexport</string>

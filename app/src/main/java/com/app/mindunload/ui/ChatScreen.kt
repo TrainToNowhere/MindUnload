@@ -12,6 +12,13 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,6 +69,7 @@ import com.app.mindunload.data.CaptureRequest
 import com.app.mindunload.data.CaptureStatus
 import com.app.mindunload.data.ChatMode
 import com.app.mindunload.data.ItemType
+import com.app.mindunload.ui.theme.HitTarget
 import com.app.mindunload.ui.theme.PlannerColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -155,7 +163,7 @@ fun ChatScreen(onOpenDrawer: () -> Unit, viewModel: ChatViewModel = viewModel())
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(20.dp, 18.dp, 20.dp, 12.dp),
+                .padding(20.dp, 8.dp, 20.dp, 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // weight(1f): the subtitle must wrap instead of squeezing the dropdown.
@@ -172,7 +180,10 @@ fun ChatScreen(onOpenDrawer: () -> Unit, viewModel: ChatViewModel = viewModel())
             if (history.isNotEmpty()) {
                 androidx.compose.material3.IconButton(
                     onClick = { showClearDialog = true },
-                    modifier = Modifier.size(36.dp),
+                    // Hit target migration: was 36 dp, now [HitTarget.min] = 48 dp.
+                    // The chat-header Row grows by 12 dp as a result — visible in
+                    // diff but acceptable; the row still fits in the header band.
+                    modifier = Modifier.size(HitTarget.min),
                 ) {
                     TrashIcon(tint = PlannerColors.muted)
                 }
@@ -227,7 +238,16 @@ fun ChatScreen(onOpenDrawer: () -> Unit, viewModel: ChatViewModel = viewModel())
             }
         }
         // Right above the input, where it is read just before sending.
-        if (mode.isCostly) {
+        // [AnimatedVisibility] makes the line fade + slide when the user switches modes,
+        // instead of snapping in or out: research mode is a real cost upgrade (Sonnet +
+        // web search), the warning arriving with a soft step gets attention without being
+        // startling. Falls back to plain if/else if Compose animation has not started yet.
+        AnimatedVisibility(
+            visible = mode.isCostly,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically(),
+            label = "chat-costly-hint",
+        ) {
             Text(
                 stringResource(R.string.chat_mode_costly_hint),
                 style = MaterialTheme.typography.labelSmall,
@@ -304,7 +324,13 @@ fun ChatScreen(onOpenDrawer: () -> Unit, viewModel: ChatViewModel = viewModel())
                             recording = false
                             recorder.cancel()
                         },
-                        modifier = Modifier.size(40.dp),
+                        // Hit target migration: was 40 dp. The chat-input Row grows
+                        // by 8 dp from this single change. The mic Box on the right
+                        // stays at 40 dp because its inner IconButton already uses
+                        // the M3 default of 48 dp — the box just *clips* it visually,
+                        // which we keep doing because the circular green plate is
+                        // the visual handle.
+                        modifier = Modifier.size(HitTarget.min),
                     ) {
                         TrashIcon(tint = PlannerColors.overdue)
                     }
@@ -316,7 +342,9 @@ fun ChatScreen(onOpenDrawer: () -> Unit, viewModel: ChatViewModel = viewModel())
                             )
                         },
                         enabled = !importing,
-                        modifier = Modifier.size(40.dp),
+                        // Hit target migration: was 40 dp. Same 8 dp row drift as
+                        // the recording-trash variant above.
+                        modifier = Modifier.size(HitTarget.min),
                     ) {
                         ImageIcon(tint = if (importing) PlannerColors.faint else PlannerColors.muted)
                     }
@@ -416,7 +444,13 @@ private fun PendingImagePreview(path: String, onRemove: () -> Unit) {
             color = PlannerColors.muted,
             modifier = Modifier.weight(1f),
         )
-        androidx.compose.material3.IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
+        androidx.compose.material3.IconButton(
+            onClick = onRemove,
+            // Hit target migration: was 36 dp. Pending-image-preview Row grows by
+            // 12 dp; this list is small and the extra height pushes only the
+            // chat-input visual up by a couple of pixels overall.
+            modifier = Modifier.size(HitTarget.min),
+        ) {
             CloseIcon(tint = PlannerColors.muted)
         }
     }
@@ -552,6 +586,14 @@ private fun ModeDropdown(mode: ChatMode, onSelect: (ChatMode) -> Unit) {
     // The mode now stays selected, so being stuck in the expensive one must be visible
     // at a glance — it costs a Sonnet call with web search per message.
     val costly = mode.isCostly
+    // Animated hover colour for the chevron: snaps lend the dropdown a slightly buggy
+    // feel when the user steps through modes; a 150 ms fade matches the rest of the
+    // chat micro-animations (costly hint slide-fade above).
+    val chevronTint by animateColorAsState(
+        targetValue = if (costly) PlannerColors.overdue else PlannerColors.muted,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 150),
+        label = "mode-chevron",
+    )
     Box {
         androidx.compose.material3.OutlinedButton(
             onClick = { expanded = true },
@@ -573,7 +615,7 @@ private fun ModeDropdown(mode: ChatMode, onSelect: (ChatMode) -> Unit) {
             )
             Spacer(Modifier.width(6.dp))
             Box(Modifier.rotate(-90f)) {
-                BackChevronIcon(tint = if (costly) PlannerColors.overdue else PlannerColors.muted)
+                BackChevronIcon(tint = chevronTint)
             }
         }
         androidx.compose.material3.DropdownMenu(

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,7 +37,7 @@ fun TasksScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 20.dp),
-        contentPadding = PaddingValues(top = 18.dp, bottom = 24.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
@@ -61,9 +62,9 @@ fun TasksScreen(
         }
         if (tasks.isEmpty()) {
             item {
-                Text(
-                    stringResource(R.string.list_empty),
-                    modifier = Modifier.padding(top = 24.dp),
+                EmptyState(
+                    message = stringResource(R.string.list_empty),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }

@@ -71,7 +71,10 @@ fun KnowledgeScreen(
                 }
             }
             if (notes.isEmpty()) {
-                Text(stringResource(R.string.knowledge_empty), color = PlannerColors.faint)
+                EmptyState(
+                    message = stringResource(R.string.knowledge_empty),
+                    icon = { KnowledgeIcon(tint = PlannerColors.faint) },
+                )
             }
         }
     }

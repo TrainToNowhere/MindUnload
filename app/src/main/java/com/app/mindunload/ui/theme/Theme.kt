@@ -33,6 +33,25 @@ object PlannerColors {
     val chipText = Color(0xFF4A5A50)
     val divider = Color(0xFFF1EEE7)
 
+    /**
+     * Status colours, named semantically rather than by appearance. Today they map 1:1
+     * to [primary]/[overdue]/[soon]/[faint], but having their own names means callers say
+     * "this row is overdue" instead of "this row is overdue-coloured". When the system
+     * later wants to move overdue from terracotta to amber — or take "done-as-faint" off
+     * the table — only the constant values change, not every screen that uses them.
+     */
+    val statusActive = primary
+    val statusOverdue = overdue
+    val statusSoon = soon
+    val statusDone = faint
+
+    /** Background tint for status pills. Mirrors [chipBg] today, kept separate so a
+     *  later re-tint doesn't yank the chips along with it. */
+    val statusBgActive = Color(0xFFE0E8E1)
+    val statusBgOverdue = Color(0xFFF4E4DA)
+    val statusBgSoon = Color(0xFFF6E9DD)
+    val statusBgDone = Color(0xFFF1EEE7)
+
     // Dark-theme variant: same green accents, dark neutral surfaces (not specified
     // 1:1 in the prototype, but derived analogously).
     val backgroundDark = Color(0xFF1C1B18)
@@ -41,6 +60,16 @@ object PlannerColors {
     val textDark = Color(0xFFEDEBE4)
     val mutedDark = Color(0xFFA9A399)
     val primaryDark = Color(0xFF7FA98D)
+
+    /**
+     * Briefing-card background in dark mode. The light-mode "dark green" panel
+     * ([darkCard]) would land at roughly the same luminance as [backgroundDark] and
+     * dissolve into the page; the lighter surface tone keeps the panel clearly framed
+     * while still reading as "this is the dark variant of the dark card".
+     */
+    val darkCardDarkMode = Color(0xFF354236)
+    val onDarkCardDarkMode = Color(0xFFEDEBE4)
+    val darkCardMutedDarkMode = Color(0xFFB1C5BA)
 }
 
 private val LightColors = lightColorScheme(
@@ -66,10 +95,15 @@ private val LightColors = lightColorScheme(
 private val DarkColors = darkColorScheme(
     primary = PlannerColors.primaryDark,
     onPrimary = PlannerColors.backgroundDark,
-    primaryContainer = PlannerColors.primary,
-    onPrimaryContainer = PlannerColors.onPrimary,
-    secondaryContainer = PlannerColors.darkCard,
-    onSecondaryContainer = PlannerColors.onDarkCard,
+    // primaryContainer had been the *dark* green — readable on a light surface but
+    // invisible against backgroundDark. The light variant ([primaryDark] = #7FA98D)
+    // gives proper contrast for FilterChip/AssistChip on dark backgrounds.
+    primaryContainer = PlannerColors.primaryDark,
+    onPrimaryContainer = PlannerColors.backgroundDark,
+    // secondaryContainer: dark mode now uses the lighter panel tone so AssistChips and
+    // any other secondary fills stay visibly distinct from [backgroundDark].
+    secondaryContainer = PlannerColors.darkCardDarkMode,
+    onSecondaryContainer = PlannerColors.onDarkCardDarkMode,
     background = PlannerColors.backgroundDark,
     onBackground = PlannerColors.textDark,
     surface = PlannerColors.surfaceDark,
@@ -97,19 +131,28 @@ fun MindUnloadTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = MaterialTheme.typography.copy(
+            // headlineSmall: the editorial signature — italic serif only here, every
+            // screen reads its title through this style.
             headlineSmall = MaterialTheme.typography.headlineSmall.copy(
                 fontFamily = PlannerHeadlineFont,
                 fontStyle = FontStyle.Italic,
                 fontWeight = FontWeight.Medium,
             ),
+            // headlineMedium was italic serif; the italic is dropped because the only
+            // callsite (Usage cost number) needs precise digit-shapes for legibility.
+            // Serif stays so the hero number reads in the same family as headlineSmall.
             headlineMedium = MaterialTheme.typography.headlineMedium.copy(
                 fontFamily = PlannerHeadlineFont,
-                fontStyle = FontStyle.Italic,
+                fontStyle = FontStyle.Normal,
                 fontWeight = FontWeight.Medium,
             ),
+            // titleLarge was italic serif; italic is dropped because the only callsite
+            // (drawer masthead) sits in a tall, dense panel and the italic swept the text
+            // off-balance. Serif stays — the masthead should still feel like the same
+            // publication as the headline.
             titleLarge = MaterialTheme.typography.titleLarge.copy(
                 fontFamily = PlannerHeadlineFont,
-                fontStyle = FontStyle.Italic,
+                fontStyle = FontStyle.Normal,
                 fontWeight = FontWeight.Medium,
             ),
             bodyLarge = MaterialTheme.typography.bodyLarge.copy(fontFamily = PlannerBodyFont),

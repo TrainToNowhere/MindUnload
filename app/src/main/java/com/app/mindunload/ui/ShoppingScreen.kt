@@ -49,7 +49,7 @@ fun ShoppingScreen(onOpenDrawer: () -> Unit, viewModel: ItemsViewModel = viewMod
             .fillMaxSize()
             .padding(horizontal = 20.dp),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(
-            top = 18.dp,
+            top = 8.dp,
             bottom = 24.dp
         ),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -118,9 +118,9 @@ fun ShoppingScreen(onOpenDrawer: () -> Unit, viewModel: ItemsViewModel = viewMod
         }
         if (allItems.isEmpty()) {
             item {
-                Text(
-                    stringResource(R.string.shopping_empty),
-                    modifier = Modifier.padding(top = 24.dp)
+                EmptyState(
+                    message = stringResource(R.string.shopping_empty),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
@@ -140,7 +140,7 @@ private fun ShoppingRow(item: PlannerItem, onToggle: (Boolean) -> Unit) {
             item.title,
             style = MaterialTheme.typography.bodyLarge,
             textDecoration = if (item.done) TextDecoration.LineThrough else null,
-            color = if (item.done) PlannerColors.faint else PlannerColors.text,
+            color = animateDoneColor(isDone = item.done, base = PlannerColors.text).value,
             modifier = Modifier
                 .weight(1f)
                 .padding(start = 6.dp),

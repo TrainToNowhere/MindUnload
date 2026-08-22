@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.mindunload.PlannerApp
+import com.app.mindunload.ai.OpenRouterModel
+import com.app.mindunload.ai.OpenRouterModels
 import com.app.mindunload.ai.Whisper
 import com.app.mindunload.ai.WhisperModel
 import com.app.mindunload.ai.WhisperModelMissingException
@@ -238,7 +240,7 @@ private fun listCutoff(): Long = System.currentTimeMillis() - LIST_HIDE_GRACE_MS
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = app.repository
-    private val claude = app.claudeService
+    private val claude = app.aiService
     private val settings = app.settings
 
     private val _briefing = MutableStateFlow(loadBriefingIfToday())
@@ -635,14 +637,42 @@ private fun sourcesSection(app: Application, sources: JSONArray?, body: String):
     return "\n\n## ${app.getString(R.string.sources_header)}\n${lines.joinToString("\n")}"
 }
 
-/** Prices per 1M tokens in USD (as of 07/2026); cache write = 1.25× input, cache read = 0.1× input. */
+/**
+ * Approximate OpenRouter list prices per 1M tokens in USD for the curated models (see
+ * [com.app.mindunload.ai.OpenRouterModels]); cache read ≈ 0.1× input where supported.
+ * Actual prices vary per provider/route and change over time — this is an estimate for
+ * the usage dashboard, not a billing-accurate figure.
+ */
 private data class ModelPricing(val inputPerMTok: Double, val outputPerMTok: Double)
 
-private fun pricingFor(model: String): ModelPricing = when {
-    "haiku" in model.lowercase() -> ModelPricing(1.0, 5.0)
-    "sonnet" in model.lowercase() -> ModelPricing(3.0, 15.0)
-    "opus" in model.lowercase() -> ModelPricing(5.0, 25.0)
-    else -> ModelPricing(3.0, 15.0)
+/**
+ * Matched on model *family* (ignoring the version number) rather than an exact name — the
+ * live-loaded model picker (see [com.app.mindunload.ai.OpenRouterModels]) means the exact
+ * model id in use shifts as providers ship new versions, so pinning prices to e.g.
+ * "claude-sonnet-5" would silently stop matching the moment "claude-sonnet-5.1" ships.
+ */
+private fun pricingFor(model: String): ModelPricing {
+    val m = model.lowercase()
+    return when {
+        "haiku" in m -> ModelPricing(1.0, 5.0)
+        "sonnet" in m -> ModelPricing(3.0, 15.0)
+        "opus" in m -> ModelPricing(5.0, 25.0)
+        ("gpt" in m || "o3" in m || "o4" in m) && ("mini" in m || "nano" in m) -> ModelPricing(0.25, 2.0)
+        "gpt" in m || "o3" in m || "o4" in m -> ModelPricing(1.25, 10.0)
+        "gemini" in m && "lite" in m -> ModelPricing(0.1, 0.4)
+        "gemini" in m && "flash" in m -> ModelPricing(0.3, 2.5)
+        "gemini" in m -> ModelPricing(1.25, 10.0)
+        "grok" in m -> ModelPricing(3.0, 15.0)
+        "deepseek" in m && "flash" in m -> ModelPricing(0.1, 0.4)
+        "deepseek" in m -> ModelPricing(0.27, 1.1)
+        ("llama" in m || "muse" in m) && ("scout" in m || "contributor" in m) -> ModelPricing(0.1, 0.3)
+        "llama" in m || "muse" in m -> ModelPricing(0.2, 0.6)
+        "kimi" in m -> ModelPricing(3.0, 15.0)
+        "minimax" in m -> ModelPricing(0.3, 1.2)
+        "qwen" in m && "flash" in m -> ModelPricing(0.03, 0.13)
+        "qwen" in m -> ModelPricing(2.0, 6.0)
+        else -> ModelPricing(3.0, 15.0)
+    }
 }
 
 /** One row in the usage dashboard: consumption + estimated cost of one model. */
@@ -699,6 +729,41 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val hasKey = MutableStateFlow(settings.apiKey != null)
     val briefingTime = MutableStateFlow(settings.briefingHour to settings.briefingMinute)
     val weatherLocation = MutableStateFlow(settings.weatherLatitude to settings.weatherLongitude)
+
+    val fastModel = MutableStateFlow(settings.fastModel)
+    val strongModel = MutableStateFlow(settings.strongModel)
+
+    fun setFastModel(id: String) {
+        settings.fastModel = id
+        fastModel.value = id
+    }
+
+    fun setStrongModel(id: String) {
+        settings.strongModel = id
+        strongModel.value = id
+    }
+
+    // --- Live OpenRouter model catalog for the pickers above ---
+
+    val modelCatalog = MutableStateFlow<List<OpenRouterModel>>(emptyList())
+    val modelCatalogLoading = MutableStateFlow(false)
+    val modelCatalogError = MutableStateFlow<String?>(null)
+
+    /** Fetches the catalog once per session; call again (after an error) to retry. */
+    fun loadModelCatalog() {
+        if (modelCatalogLoading.value) return
+        modelCatalogLoading.value = true
+        modelCatalogError.value = null
+        viewModelScope.launch {
+            try {
+                modelCatalog.value = OpenRouterModels.fetchCatalog()
+            } catch (e: Exception) {
+                modelCatalogError.value = e.message ?: e.javaClass.simpleName
+            } finally {
+                modelCatalogLoading.value = false
+            }
+        }
+    }
 
     fun setWeatherLocation(lat: Double?, lon: Double?) {
         settings.weatherLatitude = lat

@@ -1,8 +1,8 @@
 package com.app.mindunload
 
 import android.app.Application
+import com.app.mindunload.ai.AiService
 import com.app.mindunload.ai.AiUsageLog
-import com.app.mindunload.ai.ClaudeService
 import com.app.mindunload.ai.Prompts
 import com.app.mindunload.ai.ResearchService
 import com.app.mindunload.ai.SettingsStore
@@ -25,9 +25,9 @@ class PlannerApp : Application() {
     val repository: PlannerRepository by lazy { PlannerRepository(AppDatabase.get(this)) }
     val settings: SettingsStore by lazy { SettingsStore(this) }
     val prompts: Prompts by lazy { Prompts(this) }
-    val claudeService: ClaudeService by lazy { ClaudeService(settings, prompts) }
-    val researchService: ResearchService by lazy { ResearchService(claudeService, prompts) }
-    val wikiService: WikiService by lazy { WikiService(claudeService, prompts) }
+    val aiService: AiService by lazy { AiService(settings, prompts) }
+    val researchService: ResearchService by lazy { ResearchService(aiService, prompts) }
+    val wikiService: WikiService by lazy { WikiService(aiService, prompts) }
 
     override fun onCreate() {
         super.onCreate()

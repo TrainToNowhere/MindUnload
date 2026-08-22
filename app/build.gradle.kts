@@ -86,8 +86,9 @@ dependencies {
     implementation(libs.work.runtime.ktx)
     implementation(libs.security.crypto)
 
-    // Claude API
-    implementation(libs.anthropic.java)
+    // OpenRouter API
+    implementation(libs.okhttp)
+    implementation(libs.jackson.databind)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
