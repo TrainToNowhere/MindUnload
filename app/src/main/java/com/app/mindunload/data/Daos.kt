@@ -67,6 +67,17 @@ interface PlannerItemDao {
     @Query("SELECT * FROM items")
     suspend fun allIncludingArchived(): List<PlannerItem>
 
+    /**
+     * Entries created since [from] — for usage statistics. Includes archived entries:
+     * an archived task was still created, the stats should not forget it.
+     */
+    @Query("SELECT * FROM items WHERE createdAt >= :from")
+    fun createdSince(from: Long): Flow<List<PlannerItem>>
+
+    /** Entries completed since [from] — for usage statistics, same archive rule as [createdSince]. */
+    @Query("SELECT * FROM items WHERE done = 1 AND doneAt >= :from")
+    fun doneSince(from: Long): Flow<List<PlannerItem>>
+
     /** Keyword search for the AI tools: targeted backlog access instead of a full dump into the prompt. */
     @Query(
         "SELECT * FROM items WHERE archivedAt IS NULL " +

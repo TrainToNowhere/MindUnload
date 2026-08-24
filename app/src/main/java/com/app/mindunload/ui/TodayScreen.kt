@@ -368,7 +368,7 @@ private fun CleanupCard(
 }
 
 @Composable
-private fun ActivityEntryRow(entry: ActivityEntry) {
+internal fun ActivityEntryRow(entry: ActivityEntry) {
     Column(Modifier
         .fillMaxWidth()
         .padding(vertical = 10.dp)) {
@@ -393,6 +393,15 @@ private fun ActivityEntryRow(entry: ActivityEntry) {
                         line.text,
                         style = MaterialTheme.typography.bodyMedium,
                         color = PlannerColors.chipText,
+                    )
+
+                    is ActivityLine.ItemDone -> Text(
+                        stringResource(
+                            R.string.activity_item_done,
+                            typeLabel(line.type),
+                            line.title,
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }

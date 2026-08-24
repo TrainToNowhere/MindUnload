@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.app.mindunload.PlannerApp
+import com.app.mindunload.ui.theme.AppTheme
 import com.app.mindunload.ui.theme.MindUnloadTheme
 import com.app.mindunload.work.CaptureWorker
 import com.app.mindunload.work.RecurrenceRoller
@@ -35,6 +36,10 @@ class MainActivity : ComponentActivity() {
         CoroutineScope(Dispatchers.IO).launch {
             RecurrenceRoller.roll(this@MainActivity, app.repository)
         }
+        // Seed the live theme selection before the first composition — MindUnloadTheme
+        // reads AppTheme synchronously, so this must happen before setContent below.
+        AppTheme.palette = app.settings.colorPalette
+        AppTheme.darkMode = app.settings.darkModePreference
         handleShareIntent(intent)
         setContent {
             MindUnloadTheme {

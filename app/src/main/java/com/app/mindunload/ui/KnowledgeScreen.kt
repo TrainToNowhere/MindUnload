@@ -18,7 +18,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -39,12 +38,7 @@ fun KnowledgeScreen(
             .verticalScroll(rememberScrollState())
             .padding(20.dp, 14.dp, 20.dp, 24.dp),
     ) {
-        BackHeader(onBack = onBack)
-        Text(
-            stringResource(R.string.drawer_knowledge),
-            style = MaterialTheme.typography.headlineSmall.copy(fontStyle = FontStyle.Italic),
-            modifier = Modifier.padding(top = 6.dp),
-        )
+        BackHeader(title = stringResource(R.string.drawer_knowledge), onBack = onBack)
         Text(
             stringResource(R.string.knowledge_subtitle, notes.size),
             style = MaterialTheme.typography.bodySmall,

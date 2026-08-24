@@ -25,7 +25,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -59,12 +58,7 @@ fun UsageScreen(onBack: () -> Unit, viewModel: UsageViewModel = viewModel()) {
             .verticalScroll(rememberScrollState())
             .padding(20.dp, 14.dp, 20.dp, 24.dp),
     ) {
-        BackHeader(onBack = onBack)
-        Text(
-            stringResource(R.string.usage_title),
-            style = MaterialTheme.typography.headlineSmall.copy(fontStyle = FontStyle.Italic),
-            modifier = Modifier.padding(top = 6.dp),
-        )
+        BackHeader(title = stringResource(R.string.usage_title), onBack = onBack)
         Text(
             stringResource(R.string.usage_subtitle),
             style = MaterialTheme.typography.bodySmall,
@@ -211,13 +205,6 @@ fun UsageScreen(onBack: () -> Unit, viewModel: UsageViewModel = viewModel()) {
                 }
             }
         }
-
-        Text(
-            stringResource(R.string.usage_price_note),
-            style = MaterialTheme.typography.bodySmall,
-            color = PlannerColors.faint,
-            modifier = Modifier.padding(top = 14.dp),
-        )
     }
 }
 

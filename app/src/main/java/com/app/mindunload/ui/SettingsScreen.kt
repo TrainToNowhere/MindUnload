@@ -3,8 +3,10 @@ package com.app.mindunload.ui
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -35,18 +38,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.mindunload.R
 import com.app.mindunload.ai.Whisper
 import com.app.mindunload.ai.WhisperModel
+import com.app.mindunload.data.ColorPalette
+import com.app.mindunload.data.DarkModePreference
 import com.app.mindunload.reminders.ReminderScheduler
 import com.app.mindunload.reminders.reminderOffsetLabel
 import com.app.mindunload.ui.theme.PlannerColors
+import com.app.mindunload.ui.theme.previewColor
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -122,12 +128,54 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(
             .verticalScroll(rememberScrollState())
             .padding(20.dp, 14.dp, 20.dp, 24.dp),
     ) {
-        BackHeader(onBack = onBack)
-        Text(
-            stringResource(R.string.settings_headline),
-            style = MaterialTheme.typography.headlineSmall.copy(fontStyle = FontStyle.Italic),
-            modifier = Modifier.padding(top = 6.dp),
-        )
+        BackHeader(title = stringResource(R.string.settings_headline), onBack = onBack)
+
+        Column(Modifier.padding(top = 20.dp)) {
+            SectionLabel(stringResource(R.string.settings_design_section))
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(PlannerColors.surface)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        stringResource(R.string.settings_design_dark_mode),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    val darkMode by viewModel.darkMode.collectAsState()
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        DarkModePreference.entries.forEach { mode ->
+                            FilterChip(
+                                selected = darkMode == mode,
+                                onClick = { viewModel.setDarkMode(mode) },
+                                label = { Text(stringResource(darkModeLabelRes(mode))) },
+                            )
+                        }
+                    }
+                }
+                HorizontalDivider(color = PlannerColors.divider)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        stringResource(R.string.settings_design_palette),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    val palette by viewModel.colorPalette.collectAsState()
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        ColorPalette.entries.forEach { p ->
+                            PaletteSwatch(
+                                palette = p,
+                                selected = palette == p,
+                                onClick = { viewModel.setColorPalette(p) },
+                            )
+                        }
+                    }
+                }
+            }
+        }
 
         Column(Modifier.padding(top = 20.dp)) {
             SectionLabel(stringResource(R.string.settings_api_key_section))
@@ -524,6 +572,50 @@ private fun BriefingTimeDialog(
         },
         text = { androidx.compose.material3.TimePicker(state = state) },
     )
+}
+
+/** Readable label for a dark-mode preference. */
+private fun darkModeLabelRes(mode: DarkModePreference): Int = when (mode) {
+    DarkModePreference.LIGHT -> R.string.dark_mode_light
+    DarkModePreference.DARK -> R.string.dark_mode_dark
+}
+
+/** Readable label for a color palette. */
+private fun paletteLabelRes(palette: ColorPalette): Int = when (palette) {
+    ColorPalette.WARM -> R.string.palette_warm
+    ColorPalette.OCEAN -> R.string.palette_ocean
+    ColorPalette.VIOLET -> R.string.palette_violet
+    ColorPalette.SLATE -> R.string.palette_slate
+}
+
+/** One selectable swatch in the palette picker: the palette's own accent color as a dot,
+ *  its name underneath, a ring when it is the active selection. */
+@Composable
+private fun PaletteSwatch(palette: ColorPalette, selected: Boolean, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(palette.previewColor())
+                .border(
+                    width = if (selected) 2.dp else 0.dp,
+                    color = if (selected) PlannerColors.text else Color.Transparent,
+                    shape = CircleShape,
+                ),
+        )
+        Text(
+            stringResource(paletteLabelRes(palette)),
+            style = MaterialTheme.typography.labelSmall,
+            color = if (selected) PlannerColors.text else PlannerColors.muted,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+    }
 }
 
 private enum class ModelRole { FAST, STRONG }

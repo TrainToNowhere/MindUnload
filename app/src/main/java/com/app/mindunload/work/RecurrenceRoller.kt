@@ -23,8 +23,18 @@ object RecurrenceRoller {
         val nowMs = System.currentTimeMillis()
 
         for (item in repo.itemDao.allOnce()) {
+            val dueAt = item.dueAt
+            // A past, non-recurring appointment has nothing to roll forward to — it just
+            // needs closing. Without this branch only recurring appointments ever got
+            // auto-marked done; one-off appointments stayed open forever.
+            if (item.type == ItemType.APPOINTMENT && item.recurrence == null &&
+                dueAt != null && dueAt < nowMs && !item.done
+            ) {
+                repo.itemDao.update(item.copy(done = true, doneAt = item.doneAt ?: dueAt))
+                continue
+            }
             val rule = item.recurrence ?: continue
-            val dueAt = item.dueAt ?: continue
+            dueAt ?: continue
             val passed = dueAt < nowMs
             val shouldRoll = when (item.type) {
                 ItemType.APPOINTMENT -> passed

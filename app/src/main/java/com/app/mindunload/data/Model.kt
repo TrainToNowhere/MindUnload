@@ -34,6 +34,34 @@ enum class ChatMode { CAPTURE, ASK, REVIEW, RESEARCH, STRUCTURE }
 /** What is attached to a chat message besides its text — see [CaptureRequest.attachmentPath]. */
 enum class AttachmentKind { NONE, IMAGE, AUDIO }
 
+/**
+ * Named accent theme, picked in Settings → Design. Only the accent-driven colors (primary,
+ * chips, the briefing card panel) change between palettes — the neutral background/surface
+ * tones stay the same editorial warm/dark pair for every palette; see
+ * [com.app.mindunload.ui.theme.PlannerColors].
+ */
+enum class ColorPalette {
+    WARM, OCEAN, VIOLET, SLATE;
+
+    companion object {
+        val DEFAULT = WARM
+        fun fromName(name: String?): ColorPalette = entries.firstOrNull { it.name == name } ?: DEFAULT
+    }
+}
+
+/** Dark-mode preference, picked in Settings → Design — a plain on/off, no "follow system"
+ *  option (deliberately dropped: the app's palette is already a fixed, non-dynamic look,
+ *  see [com.app.mindunload.ui.theme.PlannerColors]). */
+enum class DarkModePreference {
+    LIGHT, DARK;
+
+    companion object {
+        val DEFAULT = LIGHT
+        fun fromName(name: String?): DarkModePreference =
+            entries.firstOrNull { it.name == name } ?: DEFAULT
+    }
+}
+
 @Entity(tableName = "items")
 data class PlannerItem(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

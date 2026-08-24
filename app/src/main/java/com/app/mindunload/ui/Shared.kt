@@ -82,9 +82,18 @@ fun ScreenHeader(title: String, subtitle: String?, onOpenDrawer: () -> Unit) {
     }
 }
 
-/** Header row with a back chevron, for detail-like screens without bottom nav. */
+/**
+ * Header row with a back chevron, for detail-like screens without bottom nav. With [title]
+ * given, the chevron and the screen's headline share one row (mirrors [ScreenHeader]'s
+ * menu-button-plus-title layout) instead of the headline sitting on its own line below —
+ * the plain "‹ Zurück" label is only a fallback for callers that pass no title.
+ */
 @Composable
-fun BackHeader(label: String = stringResource(R.string.action_back), onBack: () -> Unit) {
+fun BackHeader(
+    label: String = stringResource(R.string.action_back),
+    title: String? = null,
+    onBack: () -> Unit,
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -93,7 +102,15 @@ fun BackHeader(label: String = stringResource(R.string.action_back), onBack: () 
             .padding(vertical = 6.dp),
     ) {
         BackChevronIcon(tint = PlannerColors.muted)
-        Text(label, style = MaterialTheme.typography.labelLarge, color = PlannerColors.muted)
+        if (title != null) {
+            Text(
+                title,
+                style = MaterialTheme.typography.headlineSmall.copy(fontStyle = FontStyle.Italic),
+                color = PlannerColors.text,
+            )
+        } else {
+            Text(label, style = MaterialTheme.typography.labelLarge, color = PlannerColors.muted)
+        }
     }
 }
 

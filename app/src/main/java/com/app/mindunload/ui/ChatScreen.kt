@@ -8,10 +8,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -55,9 +57,11 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -71,6 +75,7 @@ import com.app.mindunload.data.ChatMode
 import com.app.mindunload.data.ItemType
 import com.app.mindunload.ui.theme.HitTarget
 import com.app.mindunload.ui.theme.PlannerColors
+import com.app.mindunload.ui.theme.Radius
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -234,6 +239,7 @@ fun ChatScreen(onOpenDrawer: () -> Unit, viewModel: ChatViewModel = viewModel())
                     onUndo = { viewModel.undo(it) },
                     onDiscard = { viewModel.discardCapture(it) },
                     onSaveResearch = { viewModel.saveResearchAsNote(entry) },
+                    onSaveToWiki = { viewModel.saveTextAsWikiNote(it) },
                 )
             }
         }
@@ -277,114 +283,118 @@ fun ChatScreen(onOpenDrawer: () -> Unit, viewModel: ChatViewModel = viewModel())
                     pendingImage = null
                 })
             }
-            if (recording) {
-                RecordingIndicator(
-                    elapsedMs = recordedMs,
-                    level = level,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                )
-            } else {
-                val hintRes = when (mode) {
-                    ChatMode.CAPTURE -> R.string.chat_input_hint
-                    ChatMode.ASK -> R.string.chat_hint_ask
-                    ChatMode.REVIEW -> R.string.chat_hint_review
-                    ChatMode.RESEARCH -> R.string.chat_hint_research
-                    ChatMode.STRUCTURE -> R.string.chat_hint_structure
-                }
-                OutlinedTextField(
-                    value = input,
-                    onValueChange = { input = it },
-                    placeholder = { Text(stringResource(hintRes), color = PlannerColors.muted) },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 6,
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedTextColor = PlannerColors.text,
-                        focusedTextColor = PlannerColors.text,
-                        cursorColor = PlannerColors.primary,
-                    ),
-                )
-            }
             val canSend = input.isNotBlank() || pendingImage != null
+            // Text and controls share one row instead of stacking in two: the image-upload
+            // button sits above the send button on the right, so the field gets the full
+            // row width for text instead of a dedicated button row underneath eating into it.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 8.dp, end = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Bottom,
             ) {
-                if (recording) {
-                    // Discarding a recording must be possible without sending it.
-                    androidx.compose.material3.IconButton(
-                        onClick = {
-                            recording = false
-                            recorder.cancel()
-                        },
-                        // Hit target migration: was 40 dp. The chat-input Row grows
-                        // by 8 dp from this single change. The mic Box on the right
-                        // stays at 40 dp because its inner IconButton already uses
-                        // the M3 default of 48 dp — the box just *clips* it visually,
-                        // which we keep doing because the circular green plate is
-                        // the visual handle.
-                        modifier = Modifier.size(HitTarget.min),
-                    ) {
-                        TrashIcon(tint = PlannerColors.overdue)
-                    }
-                } else {
-                    androidx.compose.material3.IconButton(
-                        onClick = {
-                            imagePicker.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-                            )
-                        },
-                        enabled = !importing,
-                        // Hit target migration: was 40 dp. Same 8 dp row drift as
-                        // the recording-trash variant above.
-                        modifier = Modifier.size(HitTarget.min),
-                    ) {
-                        ImageIcon(tint = if (importing) PlannerColors.faint else PlannerColors.muted)
+                Box(Modifier.weight(1f)) {
+                    if (recording) {
+                        RecordingIndicator(
+                            elapsedMs = recordedMs,
+                            level = level,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                        )
+                    } else {
+                        val hintRes = when (mode) {
+                            ChatMode.CAPTURE -> R.string.chat_input_hint
+                            ChatMode.ASK -> R.string.chat_hint_ask
+                            ChatMode.REVIEW -> R.string.chat_hint_review
+                            ChatMode.RESEARCH -> R.string.chat_hint_research
+                            ChatMode.STRUCTURE -> R.string.chat_hint_structure
+                        }
+                        OutlinedTextField(
+                            value = input,
+                            onValueChange = { input = it },
+                            placeholder = {
+                                Text(stringResource(hintRes), color = PlannerColors.muted)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 6,
+                            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                                unfocusedBorderColor = Color.Transparent,
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedTextColor = PlannerColors.text,
+                                focusedTextColor = PlannerColors.text,
+                                cursorColor = PlannerColors.primary,
+                            ),
+                        )
                     }
                 }
-                Spacer(Modifier.weight(1f))
-                // Mic until there is something to send — same slot, so the thumb never
-                // has to move between recording and sending.
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(if (recording) PlannerColors.overdue else PlannerColors.primary),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    androidx.compose.material3.IconButton(onClick = {
-                        when {
-                            recording -> finishRecording()
-                            canSend -> {
-                                viewModel.submit(input, pendingImage)
-                                input = ""
-                                pendingImage = null
-                            }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (recording) {
+                        // Discarding a recording must be possible without sending it.
+                        androidx.compose.material3.IconButton(
+                            onClick = {
+                                recording = false
+                                recorder.cancel()
+                            },
+                            // Compact, like the header menu button (HitTarget.compactHeader):
+                            // stacked above the 40 dp send circle, a full 48 dp target here
+                            // would make the button column taller than is worth it.
+                            modifier = Modifier.size(HitTarget.compactHeader),
+                        ) {
+                            TrashIcon(tint = PlannerColors.overdue)
+                        }
+                    } else {
+                        androidx.compose.material3.IconButton(
+                            onClick = {
+                                imagePicker.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                                )
+                            },
+                            enabled = !importing,
+                            modifier = Modifier.size(HitTarget.compactHeader),
+                        ) {
+                            ImageIcon(tint = if (importing) PlannerColors.faint else PlannerColors.muted)
+                        }
+                    }
+                    Spacer(Modifier.height(2.dp))
+                    // Mic until there is something to send — same slot, so the thumb never
+                    // has to move between recording and sending.
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(if (recording) PlannerColors.overdue else PlannerColors.primary),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        androidx.compose.material3.IconButton(onClick = {
+                            when {
+                                recording -> finishRecording()
+                                canSend -> {
+                                    viewModel.submit(input, pendingImage)
+                                    input = ""
+                                    pendingImage = null
+                                }
 
-                            else -> {
-                                val granted = ContextCompat.checkSelfPermission(
-                                    context,
-                                    Manifest.permission.RECORD_AUDIO,
-                                ) == PackageManager.PERMISSION_GRANTED
-                                if (granted) {
-                                    startRecording()
-                                } else {
-                                    micPermission.launch(Manifest.permission.RECORD_AUDIO)
+                                else -> {
+                                    val granted = ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.RECORD_AUDIO,
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                    if (granted) {
+                                        startRecording()
+                                    } else {
+                                        micPermission.launch(Manifest.permission.RECORD_AUDIO)
+                                    }
                                 }
                             }
-                        }
-                    }) {
-                        when {
-                            recording -> StopIcon(tint = PlannerColors.onPrimary)
-                            canSend -> SendIcon(tint = PlannerColors.onPrimary)
-                            else -> MicIcon(tint = PlannerColors.onPrimary)
+                        }) {
+                            when {
+                                recording -> StopIcon(tint = PlannerColors.onPrimary)
+                                canSend -> SendIcon(tint = PlannerColors.onPrimary)
+                                else -> MicIcon(tint = PlannerColors.onPrimary)
+                            }
                         }
                     }
                 }
@@ -641,7 +651,10 @@ private fun ModeDropdown(mode: ChatMode, onSelect: (ChatMode) -> Unit) {
     }
 }
 
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@OptIn(
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class,
+    ExperimentalFoundationApi::class,
+)
 @Composable
 private fun ChatBubbles(
     entry: ChatEntry,
@@ -651,14 +664,21 @@ private fun ChatBubbles(
     onUndo: (Long) -> Unit,
     onDiscard: (Long) -> Unit,
     onSaveResearch: () -> Unit,
+    onSaveToWiki: (String) -> Unit,
 ) {
     val capture = entry.capture
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
+        var showUserMenu by remember(capture.id) { mutableStateOf(false) }
+        Box {
         Column(
             Modifier
                 .fillMaxWidth(0.85f)
                 .clip(RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp))
                 .background(PlannerColors.primary)
+                .combinedClickable(
+                    onClick = {},
+                    onLongClick = { showUserMenu = true },
+                )
                 .padding(14.dp, 11.dp),
         ) {
             when (capture.attachmentKind) {
@@ -694,6 +714,14 @@ private fun ChatBubbles(
             // Date and time stamp at the bottom right of the bubble.
             BubbleTimestamp(capture.createdAt, color = PlannerColors.onPrimary.copy(alpha = 0.7f))
         }
+        MessageActionsMenu(
+            expanded = showUserMenu,
+            onDismiss = { showUserMenu = false },
+            text = capture.rawText,
+            onDelete = { onDiscard(capture.id) },
+            onSaveToWiki = onSaveToWiki,
+        )
+        }
         Spacer(Modifier.size(6.dp))
         when (capture.status) {
             CaptureStatus.TRANSCRIBING -> Text(
@@ -727,16 +755,25 @@ private fun ChatBubbles(
 
             CaptureStatus.DONE -> entry.message?.let { msg ->
                 val json = runCatching { JSONObject(msg.summaryJson) }.getOrNull()
+                // Free-text answer from a chat function (ask/review/research) — the text a
+                // long-press on this bubble copies or adds to the wiki. Structured
+                // items/links/commands bubbles have no single text of their own, so those
+                // stay delete-only in the menu.
+                val answer = json?.optString("answer")?.takeIf { it.isNotBlank() }
+                var showAssistantMenu by remember(capture.id) { mutableStateOf(false) }
+                Box {
                 Column(
                     Modifier
                         .fillMaxWidth(0.9f)
                         .clip(RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp))
                         .background(PlannerColors.surface)
+                        .combinedClickable(
+                            onClick = {},
+                            onLongClick = { showAssistantMenu = true },
+                        )
                         .padding(14.dp, 12.dp),
                     horizontalAlignment = Alignment.Start,
                 ) {
-                    // Free-text answer from a chat function (ask/review/research).
-                    val answer = json?.optString("answer")?.takeIf { it.isNotBlank() }
                     if (answer != null) {
                         MarkdownText(answer)
                         json.optJSONArray("sources")?.takeIf { it.length() > 0 }?.let {
@@ -797,7 +834,7 @@ private fun ChatBubbles(
                                     style = MaterialTheme.typography.labelMedium,
                                     color = PlannerColors.chipText,
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(999.dp))
+                                        .clip(RoundedCornerShape(Radius.xs))
                                         .background(PlannerColors.chipBg)
                                         .padding(11.dp, 5.dp),
                                 )
@@ -860,8 +897,65 @@ private fun ChatBubbles(
                     }
                     BubbleTimestamp(msg.createdAt, color = PlannerColors.faint)
                 }
+                MessageActionsMenu(
+                    expanded = showAssistantMenu,
+                    onDismiss = { showAssistantMenu = false },
+                    text = answer.orEmpty(),
+                    onDelete = { onDiscard(capture.id) },
+                    onSaveToWiki = onSaveToWiki,
+                )
+                }
             }
         }
+    }
+}
+
+/**
+ * Long-press context menu for one chat bubble: copy / add to wiki (only when there is
+ * text worth acting on) plus delete, which always removes the whole capture.
+ */
+@Composable
+private fun MessageActionsMenu(
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    text: String,
+    onDelete: () -> Unit,
+    onSaveToWiki: (String) -> Unit,
+) {
+    val clipboard = LocalClipboardManager.current
+    val feedback = LocalFeedback.current
+    val copiedMessage = stringResource(R.string.chat_message_copied)
+    val savedMessage = stringResource(R.string.research_promoted)
+    androidx.compose.material3.DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+        containerColor = PlannerColors.surface,
+    ) {
+        if (text.isNotBlank()) {
+            androidx.compose.material3.DropdownMenuItem(
+                text = { Text(stringResource(R.string.action_copy)) },
+                onClick = {
+                    onDismiss()
+                    clipboard.setText(AnnotatedString(text))
+                    feedback.show(copiedMessage)
+                },
+            )
+            androidx.compose.material3.DropdownMenuItem(
+                text = { Text(stringResource(R.string.research_promote)) },
+                onClick = {
+                    onDismiss()
+                    onSaveToWiki(text)
+                    feedback.show(savedMessage)
+                },
+            )
+        }
+        androidx.compose.material3.DropdownMenuItem(
+            text = { Text(stringResource(R.string.action_delete), color = PlannerColors.overdue) },
+            onClick = {
+                onDismiss()
+                onDelete()
+            },
+        )
     }
 }
 
