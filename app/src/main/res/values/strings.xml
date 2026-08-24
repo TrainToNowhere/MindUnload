@@ -7,6 +7,7 @@
     <string name="action_undo">Undo</string>
     <string name="action_retry">Retry</string>
     <string name="action_delete">Delete</string>
+    <string name="action_copy">Copy</string>
     <string name="action_back">Back</string>
 
     <string name="tab_today">Today</string>
@@ -108,6 +109,7 @@
     <string name="chat_clear_title">Clear chat</string>
     <string name="chat_clear_confirm">Delete the whole chat history? Entries created from it (tasks, appointments, shopping, wiki) are kept.</string>
     <string name="chat_cleared">Chat cleared.</string>
+    <string name="chat_message_copied">Copied to clipboard.</string>
     <string name="chat_clear_nothing">Nothing to clear — the entries shown are still being processed.</string>
     <string name="status_pending">Waiting for processing…</string>
     <string name="status_processing">Processing…</string>
@@ -119,6 +121,7 @@
         <item quantity="other">%d entries saved</item>
     </plurals>
     <string name="chat_nothing_applied">Nothing to save or change found in this input.</string>
+    <string name="activity_item_done">%1$s done · %2$s</string>
     <plurals name="chat_commands_skipped">
         <item quantity="one">%d command could not be matched to an entry.</item>
         <item quantity="other">%d commands could not be matched to an entry.</item>
@@ -203,6 +206,15 @@
     <string name="research_failed">Research failed</string>
 
     <string name="settings_headline">Settings</string>
+    <string name="settings_design_section">Design</string>
+    <string name="settings_design_dark_mode">Dark mode</string>
+    <string name="dark_mode_light">Light</string>
+    <string name="dark_mode_dark">Dark</string>
+    <string name="settings_design_palette">Color palette</string>
+    <string name="palette_warm">Warm Green</string>
+    <string name="palette_ocean">Ocean</string>
+    <string name="palette_violet">Violet</string>
+    <string name="palette_slate">Slate</string>
     <string name="settings_api_key_section">OpenRouter API key</string>
     <string name="settings_key_hint">Get a key at openrouter.ai/keys. OpenRouter gives access to models from Anthropic, OpenAI, Google and others through one API.</string>
     <string name="settings_key_present">API key is configured.</string>
@@ -219,6 +231,13 @@
     <string name="settings_weather_lat">Latitude</string>
     <string name="settings_weather_lon">Longitude</string>
 
+    <string name="stats_title">Usage statistics</string>
+    <string name="stats_subtitle">What you captured and finished, by type</string>
+    <string name="stats_created_legend">Created</string>
+    <string name="stats_done_legend">Done</string>
+    <string name="stats_empty">No activity in this period yet.</string>
+    <string name="stats_detail_header">Detailed history</string>
+
     <string name="usage_title">API usage</string>
     <string name="usage_subtitle">Tokens and estimated cost — counted locally per call</string>
     <string name="usage_month_section">This month</string>
@@ -230,7 +249,6 @@
     <string name="usage_tokens_line">In %1$s · Out %2$s · Cache %3$s · %4$d calls</string>
     <string name="usage_budget_section">Monthly budget</string>
     <string name="usage_budget_label">Budget in USD</string>
-    <string name="usage_price_note">Estimate based on list prices (07/2026): Haiku $1/$5, Sonnet $3/$15 per million tokens; cache write 1.25×, cache read 0.1× of the input price. Recording starts with this app version.</string>
     <string name="settings_model_parsing">Structuring &amp; linking</string>
     <string name="settings_model_research">Research</string>
     <string name="export_done">Export written.</string>

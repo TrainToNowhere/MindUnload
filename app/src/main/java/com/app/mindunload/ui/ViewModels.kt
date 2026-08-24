@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -190,6 +191,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Saves the text of one chat bubble (either side) as a standalone knowledge entry —
+     * the long-press "add to wiki" action. Unlike [saveResearchAsNote] this takes plain
+     * text directly, since a long-pressed bubble may be the user's own message rather
+     * than a structured assistant answer.
+     */
+    fun saveTextAsWikiNote(text: String) {
+        if (text.isBlank()) return
+        viewModelScope.launch {
+            val title = text.lineSequence().firstOrNull { it.isNotBlank() }
+                ?.trimStart('#', ' ')?.take(60)?.takeIf { it.isNotBlank() }
+                ?: text.take(60)
+            repo.itemDao.insert(PlannerItem(type = ItemType.NOTE, title = title, notes = text))
+        }
+    }
+
     fun undo(captureId: Long) {
         viewModelScope.launch { repo.undoCapture(captureId) }
     }
@@ -212,6 +229,8 @@ sealed interface ActivityLine {
     data class SavedItem(val type: ItemType?, val title: String) : ActivityLine
     data class Link(val aTitle: String, val bTitle: String) : ActivityLine
     data class Command(val text: String) : ActivityLine
+    /** Any entry type marked done — task, appointment, shopping item, etc. */
+    data class ItemDone(val type: ItemType, val title: String) : ActivityLine
 }
 
 /** One processed capture in the Today activity feed with timestamp and detail lines. */
@@ -237,6 +256,59 @@ private const val RESURFACE_SNOOZE_MS = RESURFACE_AGE_MS
 private const val LIST_HIDE_GRACE_MS = 24L * 60 * 60 * 1000
 
 private fun listCutoff(): Long = System.currentTimeMillis() - LIST_HIDE_GRACE_MS
+
+/** Start of the current calendar day, in device-local time — the window for "today". */
+private fun startOfToday(): Long =
+    LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+/**
+ * Builds the merged, chronologically sorted activity feed: chat captures (items/links/
+ * commands, restricted to [from] onward) plus one entry per completed item in [doneItems]
+ * (already time-scoped by the caller's query). Shared by [HomeViewModel.recentActivity]
+ * (today) and [StatsViewModel.detailedActivity] (a selectable period).
+ */
+private fun buildActivityFeed(
+    captures: List<CaptureRequest>,
+    messages: List<ChatMessage>,
+    doneItems: List<PlannerItem>,
+    from: Long,
+): List<ActivityEntry> {
+    val byCapture = messages.associateBy { it.captureId }
+    val captureEntries = captures
+        .filter { it.createdAt >= from }
+        .mapNotNull { capture ->
+            val msg = byCapture[capture.id] ?: return@mapNotNull null
+            val json =
+                runCatching { JSONObject(msg.summaryJson) }.getOrNull() ?: return@mapNotNull null
+            val lines = buildList {
+                json.optJSONArray("items")?.let { arr ->
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        val type =
+                            runCatching { ItemType.valueOf(obj.optString("type")) }.getOrNull()
+                        add(ActivityLine.SavedItem(type, obj.optString("title")))
+                    }
+                }
+                json.optJSONArray("links")?.let { arr ->
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        add(ActivityLine.Link(obj.optString("aTitle"), obj.optString("bTitle")))
+                    }
+                }
+                json.optJSONArray("commands")?.let { arr ->
+                    for (i in 0 until arr.length()) add(ActivityLine.Command(arr.getString(i)))
+                }
+            }
+            if (lines.isEmpty()) null else ActivityEntry(capture.createdAt, lines)
+        }
+    val doneEntries = doneItems.map { item ->
+        ActivityEntry(
+            item.doneAt ?: item.createdAt,
+            listOf(ActivityLine.ItemDone(item.type, item.title)),
+        )
+    }
+    return (captureEntries + doneEntries).sortedByDescending { it.at }
+}
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = app.repository
@@ -368,36 +440,19 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Today's activity: what chat captured (items/links/commands) plus what simply
+     * happened on its own — tasks checked off and appointments that passed, whether or
+     * not either came from a chat message. Scoped to the current calendar day, not a
+     * fixed count — the whole day's history, however long it turns out to be. A longer,
+     * period-selectable version lives in [StatsViewModel.detailedActivity].
+     */
     val recentActivity: StateFlow<List<ActivityEntry>> = combine(
         repo.captureDao.allOrdered(),
         repo.chatMessageDao.allOrdered(),
-    ) { captures, messages ->
-        val byCapture = messages.associateBy { it.captureId }
-        captures.sortedByDescending { it.createdAt }.take(5).mapNotNull { capture ->
-            val msg = byCapture[capture.id] ?: return@mapNotNull null
-            val json =
-                runCatching { JSONObject(msg.summaryJson) }.getOrNull() ?: return@mapNotNull null
-            val lines = buildList {
-                json.optJSONArray("items")?.let { arr ->
-                    for (i in 0 until arr.length()) {
-                        val obj = arr.getJSONObject(i)
-                        val type =
-                            runCatching { ItemType.valueOf(obj.optString("type")) }.getOrNull()
-                        add(ActivityLine.SavedItem(type, obj.optString("title")))
-                    }
-                }
-                json.optJSONArray("links")?.let { arr ->
-                    for (i in 0 until arr.length()) {
-                        val obj = arr.getJSONObject(i)
-                        add(ActivityLine.Link(obj.optString("aTitle"), obj.optString("bTitle")))
-                    }
-                }
-                json.optJSONArray("commands")?.let { arr ->
-                    for (i in 0 until arr.length()) add(ActivityLine.Command(arr.getString(i)))
-                }
-            }
-            if (lines.isEmpty()) null else ActivityEntry(capture.createdAt, lines)
-        }
+        repo.itemDao.doneSince(startOfToday()),
+    ) { captures, messages, doneItems ->
+        buildActivityFeed(captures, messages, doneItems, startOfToday())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private fun loadBriefingIfToday(): String? =
@@ -722,6 +777,66 @@ class UsageViewModel(application: Application) : AndroidViewModel(application) {
     }
 }
 
+/** One entry type's counts for the selected [StatsRange] on the usage-statistics screen. */
+data class TypeStat(val type: ItemType, val created: Int, val done: Int)
+
+/** Selectable time window for the usage-statistics screen. */
+enum class StatsRange {
+    WEEK, MONTH, YEAR;
+
+    fun startMillis(): Long {
+        val zone = ZoneId.systemDefault()
+        val today = LocalDate.now()
+        val start = when (this) {
+            WEEK -> today.minusWeeks(1)
+            MONTH -> today.minusMonths(1)
+            YEAR -> today.minusYears(1)
+        }
+        return start.atStartOfDay(zone).toInstant().toEpochMilli()
+    }
+}
+
+/**
+ * Usage statistics: how many entries of each type were created and completed in a
+ * selectable period, plus the full (uncapped) activity log for that same period —
+ * [HomeViewModel.recentActivity] only ever covers today.
+ */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+class StatsViewModel(application: Application) : AndroidViewModel(application) {
+    private val repo = app.repository
+
+    val range = MutableStateFlow(StatsRange.WEEK)
+
+    fun setRange(value: StatsRange) {
+        range.value = value
+    }
+
+    private val rangeStart: Flow<Long> = range.map { it.startMillis() }
+
+    val typeStats: StateFlow<List<TypeStat>> = rangeStart.flatMapLatest { from ->
+        combine(
+            repo.itemDao.createdSince(from),
+            repo.itemDao.doneSince(from),
+        ) { created, done ->
+            val createdByType = created.groupingBy { it.type }.eachCount()
+            val doneByType = done.groupingBy { it.type }.eachCount()
+            ItemType.entries.map { type ->
+                TypeStat(type, createdByType[type] ?: 0, doneByType[type] ?: 0)
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val detailedActivity: StateFlow<List<ActivityEntry>> = rangeStart.flatMapLatest { from ->
+        combine(
+            repo.captureDao.allOrdered(),
+            repo.chatMessageDao.allOrdered(),
+            repo.itemDao.doneSince(from),
+        ) { captures, messages, doneItems ->
+            buildActivityFeed(captures, messages, doneItems, from)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+}
+
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
     private val settings = app.settings
     private val repo = app.repository
@@ -854,6 +969,25 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun deleteWhisperModel(model: WhisperModel) {
         Whisper.deleteModel(app, model)
         installedWhisperModels.value = Whisper.installedModels(app)
+    }
+
+    // --- Design: accent palette + dark mode (Settings → Design) ---
+
+    val colorPalette = MutableStateFlow(settings.colorPalette)
+    val darkMode = MutableStateFlow(settings.darkModePreference)
+
+    /** Persists and applies immediately — [com.app.mindunload.ui.theme.AppTheme] drives
+     *  every screen's colors live, so no restart is needed. */
+    fun setColorPalette(palette: com.app.mindunload.data.ColorPalette) {
+        settings.colorPalette = palette
+        colorPalette.value = palette
+        com.app.mindunload.ui.theme.AppTheme.palette = palette
+    }
+
+    fun setDarkMode(mode: com.app.mindunload.data.DarkModePreference) {
+        settings.darkModePreference = mode
+        darkMode.value = mode
+        com.app.mindunload.ui.theme.AppTheme.darkMode = mode
     }
 
     suspend fun exportJson(): String = JsonExporter.export(repo)

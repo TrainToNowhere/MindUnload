@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -49,20 +50,14 @@ internal fun DrawerContent(viewModel: DrawerViewModel, onNavigate: (String) -> U
         drawerContainerColor = Color(0xFFFBFAF7),
     ) {
         Column(Modifier.fillMaxSize()) {
-            // Drawer title block: top needs 22 dp to clear the status bar inset, bottom
-            // is tighter so subtitle sits close to the title. Migrated to [Spacing.xl]
-            // horizontally.
+            // Drawer title block: top needs 22 dp to clear the status bar inset. Migrated
+            // to [Spacing.xl] horizontally. Title only — no subtitle underneath.
             Column(Modifier.padding(Spacing.xl, 22.dp, Spacing.xl, Spacing.l)) {
                 Text(
                     stringResource(R.string.drawer_title),
                     // Theme sets titleLarge to Normal serif; any extra Italic here
                     // would re-apply the very thing the theme was tuned to avoid.
                     style = MaterialTheme.typography.titleLarge,
-                )
-                Text(
-                    stringResource(R.string.drawer_subtitle),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = PlannerColors.muted,
                 )
             }
             Column(
@@ -91,19 +86,31 @@ internal fun DrawerContent(viewModel: DrawerViewModel, onNavigate: (String) -> U
                 DrawerItem(
                     stringResource(R.string.usage_title),
                     null,
-                    icon = { GoalsIcon(tint = PlannerColors.muted) },
+                    icon = { UsageIcon(tint = PlannerColors.muted) },
                 ) { onNavigate("usage") }
+                DrawerItem(
+                    stringResource(R.string.stats_title),
+                    null,
+                    icon = { StatsIcon(tint = PlannerColors.muted) },
+                ) { onNavigate("stats") }
                 SectionLabel(stringResource(R.string.drawer_categories))
                 categories.forEach { cat ->
                     DrawerItem(
                         cat.name,
                         cat.count.toString(),
-                        icon = { TypeIcon(cat.topType, tint = PlannerColors.muted) },
+                        icon = { CategoryIcon(cat.name, cat.topType, tint = PlannerColors.muted) },
                     ) { onNavigate("category/${android.net.Uri.encode(cat.name)}") }
                 }
             }
             HorizontalDivider(color = PlannerColors.divider)
-            Column(Modifier.padding(Spacing.m)) {
+            // navigationBarsPadding: with the 3-button system nav bar shown, the drawer
+            // sheet would otherwise extend the Settings row underneath it — same fix as
+            // the bottom tab bar in [BottomNav].
+            Column(
+                Modifier
+                    .navigationBarsPadding()
+                    .padding(Spacing.m),
+            ) {
                 DrawerItem(
                     stringResource(R.string.settings_headline),
                     null,

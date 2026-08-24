@@ -389,6 +389,134 @@ fun TabShoppingIcon(modifier: Modifier = Modifier, tint: Color = Color.Unspecifi
     }
 }
 
+/** Heart with a cross — used for the "Gesundheit" (health) category row in the drawer. */
+@Composable
+fun HealthIcon(modifier: Modifier = Modifier, tint: Color = Color.Unspecified) {
+    IconCanvas(modifier, tint) { scale, sw ->
+        val heart = androidx.compose.ui.graphics.Path().apply {
+            moveTo(12f * scale, 18.5f * scale)
+            cubicTo(
+                5f * scale, 12.5f * scale,
+                5f * scale, 6.5f * scale,
+                9.2f * scale, 6.5f * scale,
+            )
+            cubicTo(11f * scale, 6.5f * scale, 12f * scale, 8f * scale, 12f * scale, 8.3f * scale)
+            cubicTo(
+                12f * scale, 8f * scale,
+                13f * scale, 6.5f * scale,
+                14.8f * scale, 6.5f * scale,
+            )
+            cubicTo(19f * scale, 6.5f * scale, 19f * scale, 12.5f * scale, 12f * scale, 18.5f * scale)
+            close()
+        }
+        drawPath(
+            heart,
+            tint,
+            style = Stroke(
+                width = sw,
+                cap = StrokeCap.Round,
+                join = androidx.compose.ui.graphics.StrokeJoin.Round,
+            ),
+        )
+        drawLine(tint, pt(12f, 9.8f, scale), pt(12f, 13f, scale), sw, StrokeCap.Round)
+        drawLine(tint, pt(10.4f, 11.4f, scale), pt(13.6f, 11.4f, scale), sw, StrokeCap.Round)
+    }
+}
+
+/** Briefcase — used for the "Arbeit" (work) category row in the drawer. */
+@Composable
+fun BriefcaseIcon(modifier: Modifier = Modifier, tint: Color = Color.Unspecified) {
+    IconCanvas(modifier, tint) { scale, sw ->
+        val handle = androidx.compose.ui.graphics.Path().apply {
+            moveTo(9f * scale, 7.2f * scale)
+            lineTo(9f * scale, 5.7f * scale)
+            arcTo(
+                androidx.compose.ui.geometry.Rect(pt(9f, 3f, scale), pt(15f, 6f, scale)),
+                180f,
+                -180f,
+                false,
+            )
+            lineTo(15f * scale, 7.2f * scale)
+        }
+        drawPath(handle, tint, style = Stroke(width = sw, cap = StrokeCap.Round))
+        drawRoundRect(
+            tint,
+            topLeft = pt(4f, 7.2f, scale),
+            size = Size(16f * scale, 11f * scale),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.2f * scale, 2.2f * scale),
+            style = Stroke(sw),
+        )
+        drawLine(tint, pt(4f, 12.5f, scale), pt(20f, 12.5f, scale), sw, StrokeCap.Round)
+        drawLine(tint, pt(11f, 11.5f, scale), pt(13f, 11.5f, scale), sw * 1.4f, StrokeCap.Round)
+    }
+}
+
+/** Smiling face — used for the "Persönlich" (personal) category row in the drawer. */
+@Composable
+fun SmileyIcon(modifier: Modifier = Modifier, tint: Color = Color.Unspecified) {
+    IconCanvas(modifier, tint) { scale, sw ->
+        drawCircle(tint, radius = 8f * scale, center = pt(12f, 12f, scale), style = Stroke(sw))
+        drawCircle(tint, radius = 1f * scale, center = pt(8.8f, 10.2f, scale))
+        drawCircle(tint, radius = 1f * scale, center = pt(15.2f, 10.2f, scale))
+        val smile = androidx.compose.ui.graphics.Path().apply {
+            moveTo(8f * scale, 13.5f * scale)
+            quadraticTo(12f * scale, 17.5f * scale, 16f * scale, 13.5f * scale)
+        }
+        drawPath(smile, tint, style = Stroke(width = sw, cap = StrokeCap.Round))
+    }
+}
+
+/** Small office tower — used for the "Verwaltung" (administration) category row in the drawer. */
+@Composable
+fun OfficeTowerIcon(modifier: Modifier = Modifier, tint: Color = Color.Unspecified) {
+    IconCanvas(modifier, tint) { scale, sw ->
+        drawRoundRect(
+            tint,
+            topLeft = pt(7f, 3.3f, scale),
+            size = Size(10f * scale, 17.2f * scale),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.4f * scale, 1.4f * scale),
+            style = Stroke(sw),
+        )
+        drawLine(tint, pt(4f, 20.5f, scale), pt(20f, 20.5f, scale), sw, StrokeCap.Round)
+        val windowStroke = sw * 0.8f
+        listOf(9.4f, 14.6f).forEach { cx ->
+            listOf(6.8f, 10.6f, 14.4f).forEach { cy ->
+                drawRoundRect(
+                    tint,
+                    topLeft = pt(cx - 1f, cy - 1f, scale),
+                    size = Size(2f * scale, 2f * scale),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(0.4f * scale, 0.4f * scale),
+                    style = Stroke(windowStroke),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Icon for a drawer category row. Named categories the user is likely to create
+ * (Wissen/Gesundheit/Arbeit/Persönlich/Verwaltung, matched case-insensitively) get a
+ * bespoke icon instead of the generic per-item-type one, so they read at a glance instead
+ * of collapsing onto whichever entry type happens to dominate the category. Anything else
+ * falls back to [TypeIcon].
+ */
+@Composable
+fun CategoryIcon(
+    name: String,
+    topType: com.app.mindunload.data.ItemType,
+    modifier: Modifier = Modifier,
+    tint: Color = Color.Unspecified,
+) {
+    when (name.trim().lowercase()) {
+        "wissen" -> KnowledgeIcon(modifier, tint)
+        "gesundheit" -> HealthIcon(modifier, tint)
+        "arbeit" -> BriefcaseIcon(modifier, tint)
+        "persönlich", "personlich" -> SmileyIcon(modifier, tint)
+        "verwaltung" -> OfficeTowerIcon(modifier, tint)
+        else -> TypeIcon(topType, modifier, tint)
+    }
+}
+
 /** Icon for an entry type — e.g. for category rows that carry the icon of their dominant type. */
 @Composable
 fun TypeIcon(
@@ -409,31 +537,44 @@ fun TypeIcon(
 @Composable
 fun KnowledgeIcon(modifier: Modifier = Modifier, tint: Color = Color.Unspecified) {
     IconCanvas(modifier, tint) { scale, sw ->
-        val book = androidx.compose.ui.graphics.Path().apply {
-            moveTo(5f * scale, 4.5f * scale)
-            lineTo(16.5f * scale, 4.5f * scale)
-            arcTo(
-                androidx.compose.ui.geometry.Rect(pt(14f, 4.5f, scale), pt(19f, 9.5f, scale)),
-                -90f,
-                90f,
-                false
+        // Open book: two pages fanning out from a center spine, each an open contour
+        // (not closed/filled) so it reads as paper, not a solid shape.
+        val leftPage = androidx.compose.ui.graphics.Path().apply {
+            moveTo(12f * scale, 8f * scale)
+            cubicTo(
+                10.5f * scale, 6.3f * scale,
+                7.5f * scale, 5.5f * scale,
+                4.7f * scale, 6f * scale,
             )
-            lineTo(19f * scale, 19.5f * scale)
-            lineTo(7.5f * scale, 19.5f * scale)
-            arcTo(
-                androidx.compose.ui.geometry.Rect(pt(5f, 14.5f, scale), pt(10f, 19.5f, scale)),
-                0f,
-                90f,
-                false
+            lineTo(4.7f * scale, 17f * scale)
+            cubicTo(
+                7.5f * scale, 16.5f * scale,
+                10.5f * scale, 17.3f * scale,
+                12f * scale, 19f * scale,
             )
-            close()
         }
-        drawPath(
-            book,
-            tint,
-            style = Stroke(width = sw, join = androidx.compose.ui.graphics.StrokeJoin.Round)
+        val rightPage = androidx.compose.ui.graphics.Path().apply {
+            moveTo(12f * scale, 8f * scale)
+            cubicTo(
+                13.5f * scale, 6.3f * scale,
+                16.5f * scale, 5.5f * scale,
+                19.3f * scale, 6f * scale,
+            )
+            lineTo(19.3f * scale, 17f * scale)
+            cubicTo(
+                16.5f * scale, 16.5f * scale,
+                13.5f * scale, 17.3f * scale,
+                12f * scale, 19f * scale,
+            )
+        }
+        val pageStyle = Stroke(
+            width = sw,
+            cap = StrokeCap.Round,
+            join = androidx.compose.ui.graphics.StrokeJoin.Round,
         )
-        drawLine(tint, pt(5f, 17f, scale), pt(19f, 17f, scale), sw, StrokeCap.Round)
+        drawPath(leftPage, tint, style = pageStyle)
+        drawPath(rightPage, tint, style = pageStyle)
+        drawLine(tint, pt(12f, 8f, scale), pt(12f, 19f, scale), sw, StrokeCap.Round)
     }
 }
 
@@ -451,6 +592,46 @@ fun GoalsIcon(modifier: Modifier = Modifier, tint: Color = Color.Unspecified) {
     IconCanvas(modifier, tint) { scale, sw ->
         drawCircle(tint, radius = 8f * scale, center = pt(12f, 12f, scale), style = Stroke(sw))
         drawCircle(tint, radius = 3f * scale, center = pt(12f, 12f, scale), style = Stroke(sw))
+    }
+}
+
+/**
+ * Ascending usage bars — distinct from [GoalsIcon]'s bullseye so the drawer's "Goals" and
+ * "API usage" rows (previously both the bullseye) no longer read as the same entry.
+ */
+@Composable
+fun UsageIcon(modifier: Modifier = Modifier, tint: Color = Color.Unspecified) {
+    IconCanvas(modifier, tint) { scale, sw ->
+        drawLine(tint, pt(6f, 19f, scale), pt(6f, 13f, scale), sw, StrokeCap.Round)
+        drawLine(tint, pt(12f, 19f, scale), pt(12f, 8f, scale), sw, StrokeCap.Round)
+        drawLine(tint, pt(18f, 19f, scale), pt(18f, 5f, scale), sw, StrokeCap.Round)
+    }
+}
+
+/**
+ * Classic jagged trend line — peaks and valleys across the grid, the familiar chart-line
+ * glyph. Deliberately not more ascending bars ([UsageIcon]) so the drawer's "API usage"
+ * and "Usage statistics" rows read as different things at a glance.
+ */
+@Composable
+fun StatsIcon(modifier: Modifier = Modifier, tint: Color = Color.Unspecified) {
+    IconCanvas(modifier, tint) { scale, sw ->
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(3.5f * scale, 16.5f * scale)
+            lineTo(8f * scale, 10f * scale)
+            lineTo(11f * scale, 13.5f * scale)
+            lineTo(15.5f * scale, 6f * scale)
+            lineTo(20.5f * scale, 9.5f * scale)
+        }
+        drawPath(
+            path,
+            tint,
+            style = Stroke(
+                width = sw,
+                cap = StrokeCap.Round,
+                join = androidx.compose.ui.graphics.StrokeJoin.Round,
+            ),
+        )
     }
 }
 

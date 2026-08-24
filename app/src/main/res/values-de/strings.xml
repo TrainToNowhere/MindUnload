@@ -7,6 +7,7 @@
     <string name="action_undo">Rückgängig</string>
     <string name="action_retry">Erneut</string>
     <string name="action_delete">Löschen</string>
+    <string name="action_copy">Kopieren</string>
     <string name="action_back">Zurück</string>
 
     <string name="tab_today">Heute</string>
@@ -108,6 +109,7 @@
     <string name="chat_clear_title">Chat leeren</string>
     <string name="chat_clear_confirm">Den gesamten Chatverlauf löschen? Die daraus erfassten Einträge (Aufgaben, Termine, Einkauf, Wiki) bleiben erhalten.</string>
     <string name="chat_cleared">Chat geleert.</string>
+    <string name="chat_message_copied">In die Zwischenablage kopiert.</string>
     <string name="chat_clear_nothing">Nichts zu leeren — die angezeigten Einträge werden noch verarbeitet.</string>
     <string name="status_pending">Wartet auf Verarbeitung…</string>
     <string name="status_processing">Wird verarbeitet…</string>
@@ -119,6 +121,7 @@
         <item quantity="other">%d Einträge gespeichert</item>
     </plurals>
     <string name="chat_nothing_applied">Darin war nichts zu speichern oder zu ändern.</string>
+    <string name="activity_item_done">%1$s erledigt · %2$s</string>
     <plurals name="chat_commands_skipped">
         <item quantity="one">%d Befehl konnte keinem Eintrag zugeordnet werden.</item>
         <item quantity="other">%d Befehle konnten keinem Eintrag zugeordnet werden.</item>
@@ -203,6 +206,15 @@
     <string name="research_failed">Recherche fehlgeschlagen</string>
 
     <string name="settings_headline">Einstellungen</string>
+    <string name="settings_design_section">Design</string>
+    <string name="settings_design_dark_mode">Dunkelmodus</string>
+    <string name="dark_mode_light">Hell</string>
+    <string name="dark_mode_dark">Dunkel</string>
+    <string name="settings_design_palette">Farbpalette</string>
+    <string name="palette_warm">Warmes Grün</string>
+    <string name="palette_ocean">Ozean</string>
+    <string name="palette_violet">Violett</string>
+    <string name="palette_slate">Schiefergrau</string>
     <string name="settings_api_key_section">OpenRouter API-Key</string>
     <string name="settings_key_hint">Einen Key gibt es auf openrouter.ai/keys. OpenRouter bietet Zugriff auf Modelle von Anthropic, OpenAI, Google und anderen über eine einzige API.</string>
     <string name="settings_key_present">API-Key ist hinterlegt.</string>
@@ -219,6 +231,13 @@
     <string name="settings_weather_lat">Breitengrad</string>
     <string name="settings_weather_lon">Längengrad</string>
 
+    <string name="stats_title">Nutzungsstatistiken</string>
+    <string name="stats_subtitle">Was du erfasst und erledigt hast, nach Art</string>
+    <string name="stats_created_legend">Erstellt</string>
+    <string name="stats_done_legend">Erledigt</string>
+    <string name="stats_empty">Noch keine Aktivität in diesem Zeitraum.</string>
+    <string name="stats_detail_header">Detaillierter Verlauf</string>
+
     <string name="usage_title">API-Nutzung</string>
     <string name="usage_subtitle">Tokens und geschätzte Kosten — lokal pro Aufruf gezählt</string>
     <string name="usage_month_section">Dieser Monat</string>
@@ -230,7 +249,6 @@
     <string name="usage_tokens_line">Ein %1$s · Aus %2$s · Cache %3$s · %4$d Aufrufe</string>
     <string name="usage_budget_section">Monatsbudget</string>
     <string name="usage_budget_label">Budget in USD</string>
-    <string name="usage_price_note">Schätzung nach Listenpreisen (07/2026): Haiku 1 $/5 $, Sonnet 3 $/15 $ pro Million Tokens; Cache-Schreiben 1,25×, Cache-Lesen 0,1× des Eingabepreises. Zählung beginnt mit dieser App-Version.</string>
     <string name="settings_model_parsing">Strukturieren &amp; Verknüpfen</string>
     <string name="settings_model_research">Recherche</string>
     <string name="export_done">Export geschrieben.</string>

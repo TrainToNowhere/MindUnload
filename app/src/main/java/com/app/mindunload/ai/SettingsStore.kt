@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.app.mindunload.data.ColorPalette
+import com.app.mindunload.data.DarkModePreference
 
 class SettingsStore(context: Context) {
     private val prefs = run {
@@ -124,6 +126,20 @@ class SettingsStore(context: Context) {
             prefs.edit { putFloat(KEY_MONTHLY_BUDGET, value) }
         }
 
+    /** Accent theme for the whole app (Settings → Design). */
+    var colorPalette: ColorPalette
+        get() = ColorPalette.fromName(prefs.getString(KEY_COLOR_PALETTE, null))
+        set(value) {
+            prefs.edit { putString(KEY_COLOR_PALETTE, value.name) }
+        }
+
+    /** Dark-mode preference (Settings → Design). SYSTEM follows the device setting. */
+    var darkModePreference: DarkModePreference
+        get() = DarkModePreference.fromName(prefs.getString(KEY_DARK_MODE, null))
+        set(value) {
+            prefs.edit { putString(KEY_DARK_MODE, value.name) }
+        }
+
     private companion object {
         const val KEY_CLEANUP_JSON = "cleanup_json"
         const val KEY_API_KEY = "openrouter_api_key"
@@ -138,5 +154,7 @@ class SettingsStore(context: Context) {
         const val KEY_MONTHLY_BUDGET = "monthly_budget_usd"
         const val KEY_WHISPER_MODEL = "whisper_model"
         const val KEY_REMINDER_OFFSETS = "reminder_offsets"
+        const val KEY_COLOR_PALETTE = "color_palette"
+        const val KEY_DARK_MODE = "dark_mode_preference"
     }
 }

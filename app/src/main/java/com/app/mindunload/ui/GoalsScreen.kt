@@ -23,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -47,12 +46,7 @@ fun GoalsScreen(
             .verticalScroll(rememberScrollState())
             .padding(20.dp, 14.dp, 20.dp, 24.dp),
     ) {
-        BackHeader(onBack = onBack)
-        Text(
-            stringResource(R.string.drawer_goals),
-            style = MaterialTheme.typography.headlineSmall.copy(fontStyle = FontStyle.Italic),
-            modifier = Modifier.padding(top = 6.dp),
-        )
+        BackHeader(title = stringResource(R.string.drawer_goals), onBack = onBack)
         Text(
             stringResource(R.string.goals_subtitle, goals.count { !it.done }),
             style = MaterialTheme.typography.bodySmall,

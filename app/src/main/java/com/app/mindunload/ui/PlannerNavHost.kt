@@ -141,6 +141,9 @@ fun PlannerNavHost() {
                     composable("usage") {
                         UsageScreen(onBack = { backToDrawer() })
                     }
+                    composable("stats") {
+                        StatsScreen(onBack = { backToDrawer() })
+                    }
                     composable("settings") {
                         SettingsScreen(onBack = { backToDrawer() })
                     }
