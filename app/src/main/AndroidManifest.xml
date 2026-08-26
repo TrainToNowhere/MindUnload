@@ -2,15 +2,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Für die kontinuierliche In-App-Spracheingabe im Chat (SpeechRecognizer). -->
+    <!-- For continuous in-app voice input in the chat (SpeechRecognizer). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <!-- Fotos werden über die Kamera-App aufgenommen (ACTION_IMAGE_CAPTURE), daher keine
-         CAMERA-Berechtigung: würde sie hier stehen, verlangte das System sie zur Laufzeit. -->
+    <!-- Photos are taken by the camera app (ACTION_IMAGE_CAPTURE), hence no CAMERA
+         permission: declaring one here would make the system demand it at runtime. -->
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
@@ -50,7 +50,7 @@
             android:taskAffinity=""
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
-        <!-- Gibt der Kamera-App Schreibzugriff auf genau eine Datei in filesDir/attachments. -->
+        <!-- Grants the camera app write access to exactly one file in filesDir/attachments. -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
