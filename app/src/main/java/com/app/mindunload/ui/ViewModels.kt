@@ -4,12 +4,12 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.mindunload.PlannerApp
+import com.app.mindunload.R
 import com.app.mindunload.ai.OpenRouterModel
 import com.app.mindunload.ai.OpenRouterModels
 import com.app.mindunload.ai.Whisper
 import com.app.mindunload.ai.WhisperModel
 import com.app.mindunload.ai.WhisperModelMissingException
-import com.app.mindunload.R
 import com.app.mindunload.data.AttachmentKind
 import com.app.mindunload.data.Attachments
 import com.app.mindunload.data.CaptureRequest
@@ -87,19 +87,40 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Sends a message. [imagePath] is a photo already imported into the app's storage —
-     * its text is extracted during processing, so a photo alone (without a caption) is a
-     * complete message.
+     * Copies a picked document into the app's storage (off the main thread) and reports
+     * the resulting path — null when the file was unreadable or too big.
      */
-    fun submit(text: String, imagePath: String? = null) {
-        if (text.isBlank() && imagePath == null) return
+    fun importFile(
+        context: android.content.Context,
+        uri: android.net.Uri,
+        onDone: (String?) -> Unit,
+    ) {
+        viewModelScope.launch {
+            val path = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                Attachments.importFile(context, uri)
+            }
+            onDone(path)
+        }
+    }
+
+    /**
+     * Sends a message. [attachmentPath] is a photo or document already imported into the
+     * app's storage — its text is extracted during processing, so an attachment alone
+     * (without a caption) is a complete message.
+     */
+    fun submit(
+        text: String,
+        attachmentPath: String? = null,
+        attachmentKind: AttachmentKind = AttachmentKind.NONE,
+    ) {
+        if (text.isBlank() && attachmentPath == null) return
         val selectedMode = mode.value
         viewModelScope.launch {
             repo.enqueueCapture(
                 rawText = text,
                 mode = selectedMode,
-                attachmentPath = imagePath,
-                attachmentKind = if (imagePath == null) AttachmentKind.NONE else AttachmentKind.IMAGE,
+                attachmentPath = attachmentPath,
+                attachmentKind = if (attachmentPath == null) AttachmentKind.NONE else attachmentKind,
             )
             CaptureWorker.enqueue(app)
         }

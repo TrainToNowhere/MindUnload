@@ -3,9 +3,12 @@ package com.app.mindunload.data
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.media.ExifInterface
 import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
+import android.provider.OpenableColumns
+import com.app.mindunload.data.Attachments.MAX_EDGE
+import com.app.mindunload.data.Attachments.NAME_SEP
 import java.io.File
 import java.util.UUID
 
@@ -38,6 +41,63 @@ object Attachments {
         bitmap.recycle()
         target.absolutePath
     }.getOrNull()
+
+    /**
+     * Separates the generated unique prefix from the original file name of a document
+     * attachment: the name is what the chat bubble shows and what the model is told the
+     * file is called, so it has to survive the copy without a second database column.
+     */
+    private const val NAME_SEP = "__"
+
+    /** Bigger documents are refused — base64 in a chat request, not a file upload. */
+    private const val MAX_FILE_BYTES = 20L * 1024 * 1024
+
+    /**
+     * Copies a picked document into the app's storage, keeping its original name after
+     * the unique prefix (see [NAME_SEP]). Unlike a photo the bytes stay untouched — the
+     * extraction later on decides what to do with them.
+     * Returns the absolute path, null when the file was unreadable or too big.
+     */
+    fun importFile(context: Context, uri: Uri): String? = runCatching {
+        val name = displayNameOf(context, uri) ?: "document"
+        val target = File(
+            dir(context),
+            "${System.currentTimeMillis()}-${
+                UUID.randomUUID().toString().take(8)
+            }$NAME_SEP${sanitize(name)}"
+        )
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            target.outputStream().use { output ->
+                val copied = input.copyTo(output)
+                if (copied > MAX_FILE_BYTES) {
+                    target.delete()
+                    return null
+                }
+            }
+        } ?: return null
+        if (target.length() == 0L) {
+            target.delete()
+            return null
+        }
+        target.absolutePath
+    }.getOrNull()
+
+    /** Original file name of a document attachment, for the UI and the model prompt. */
+    fun fileName(path: String): String =
+        File(path).name.substringAfter(NAME_SEP, File(path).name)
+
+    /** Extension of a stored attachment, lowercase and without the dot. */
+    fun extension(path: String): String = File(path).extension.lowercase()
+
+    internal fun sanitize(name: String): String =
+        name.replace(Regex("""[/\\\n\r\t]"""), "_").replace(NAME_SEP, "_").take(80)
+
+    private fun displayNameOf(context: Context, uri: Uri): String? = runCatching {
+        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+    }.getOrNull() ?: uri.lastPathSegment?.substringAfterLast('/')
 
     /** Media type of a stored attachment for the image content block. */
     const val IMAGE_MEDIA_TYPE = "image/jpeg"

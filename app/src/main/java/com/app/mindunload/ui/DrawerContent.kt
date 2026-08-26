@@ -22,7 +22,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.app.mindunload.R
@@ -47,7 +46,11 @@ internal fun DrawerContent(viewModel: DrawerViewModel, onNavigate: (String) -> U
 
     ModalDrawerSheet(
         modifier = Modifier.width(280.dp),
-        drawerContainerColor = Color(0xFFFBFAF7),
+        // Was a hardcoded near-white, which stayed light in dark mode. The sheet is a
+        // raised surface, so it follows [PlannerColors.surface]; the content color has to
+        // come along, otherwise M3 derives it from a scheme color that no longer matches.
+        drawerContainerColor = PlannerColors.surface,
+        drawerContentColor = PlannerColors.text,
     ) {
         Column(Modifier.fillMaxSize()) {
             // Drawer title block: top needs 22 dp to clear the status bar inset. Migrated

@@ -8,9 +8,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -232,32 +232,25 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(
                     pickerFor = role
                     if (modelCatalog.isEmpty()) viewModel.loadModelCatalog()
                 }
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { openPicker(ModelRole.FAST) },
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        stringResource(R.string.settings_model_parsing),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Tag(com.app.mindunload.ai.OpenRouterModels.labelFor(fastModel, modelCatalog))
-                }
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { openPicker(ModelRole.STRONG) },
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        stringResource(R.string.settings_model_research),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Tag(com.app.mindunload.ai.OpenRouterModels.labelFor(strongModel, modelCatalog))
-                }
+                // Label above, the picker chip on its own line below: a model name
+                // ("anthropic · Claude Haiku 4.5") next to the label leaves neither
+                // enough width.
+                ModelSetting(
+                    label = stringResource(R.string.settings_model_parsing),
+                    model = com.app.mindunload.ai.OpenRouterModels.labelFor(
+                        fastModel,
+                        modelCatalog
+                    ),
+                    onClick = { openPicker(ModelRole.FAST) },
+                )
+                ModelSetting(
+                    label = stringResource(R.string.settings_model_research),
+                    model = com.app.mindunload.ai.OpenRouterModels.labelFor(
+                        strongModel,
+                        modelCatalog
+                    ),
+                    onClick = { openPicker(ModelRole.STRONG) },
+                )
                 pickerFor?.let { role ->
                     ModelPickerDialog(
                         selected = if (role == ModelRole.FAST) fastModel else strongModel,
@@ -618,6 +611,21 @@ private fun PaletteSwatch(palette: ColorPalette, selected: Boolean, onClick: () 
     }
 }
 
+/** One model slot in Settings: what it is used for, and which model is picked for it. */
+@Composable
+private fun ModelSetting(label: String, model: String, onClick: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Tag(model)
+    }
+}
+
 private enum class ModelRole { FAST, STRONG }
 
 /**
@@ -686,7 +694,18 @@ private fun ModelPickerDialog(
                                     selected = model.id == selected,
                                     onClick = { onSelect(model.id) },
                                 )
-                                Text(model.label, style = MaterialTheme.typography.bodyMedium)
+                                Column {
+                                    Text(model.label, style = MaterialTheme.typography.bodyMedium)
+                                    // What a model costs belongs where it is picked — the
+                                    // chat itself no longer flags any mode as expensive.
+                                    modelPriceLabel(model)?.let { price ->
+                                        Text(
+                                            price,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = PlannerColors.muted,
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -694,6 +713,28 @@ private fun ModelPickerDialog(
             }
         },
     )
+}
+
+/**
+ * Price line under a model in the picker: input and output per million tokens, as
+ * OpenRouter reports them. Null when the catalog entry carries no pricing at all.
+ */
+@Composable
+private fun modelPriceLabel(model: com.app.mindunload.ai.OpenRouterModel): String? {
+    val input = model.inputPricePerMillion
+    val output = model.outputPricePerMillion
+    if (input == null && output == null) return null
+    if ((input ?: 0.0) == 0.0 && (output ?: 0.0) == 0.0) {
+        return stringResource(R.string.settings_model_price_free)
+    }
+    return stringResource(R.string.settings_model_price, formatPrice(input), formatPrice(output))
+}
+
+/** Two decimals down to a cent, three below it — cheap models differ in the third digit. */
+internal fun formatPrice(value: Double?): String = when {
+    value == null -> "?"
+    value >= 1.0 -> String.format(java.util.Locale.US, "$%.2f", value)
+    else -> String.format(java.util.Locale.US, "$%.3f", value)
 }
 
 @Composable

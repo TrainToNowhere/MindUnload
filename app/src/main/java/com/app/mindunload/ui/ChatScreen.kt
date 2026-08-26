@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -14,13 +15,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,6 +58,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.mindunload.R
@@ -85,9 +80,14 @@ import java.io.File
 @Composable
 fun ChatScreen(onOpenDrawer: () -> Unit, viewModel: ChatViewModel = viewModel()) {
     var input by remember { mutableStateOf("") }
-    // Photo picked but not sent yet — shown as a preview above the input field.
-    var pendingImage by remember { mutableStateOf<String?>(null) }
+    // Attachment picked but not sent yet — shown as a preview above the input field.
+    var pending by remember { mutableStateOf<PendingAttachment?>(null) }
     var importing by remember { mutableStateOf(false) }
+    // Open attachment menu (camera / gallery) anchored at the image button.
+    var attachMenu by remember { mutableStateOf(false) }
+    // File the camera app is writing into — kept across the launch so the result
+    // callback knows what to import.
+    var cameraTarget by remember { mutableStateOf<File?>(null) }
     val history by viewModel.history.collectAsState()
     val context = LocalContext.current
 
@@ -117,6 +117,11 @@ fun ChatScreen(onOpenDrawer: () -> Unit, viewModel: ChatViewModel = viewModel())
         level = 0f
     }
 
+    val feedback = LocalFeedback.current
+    val recordingFailed = stringResource(R.string.voice_record_failed)
+    val cameraFailed = stringResource(R.string.chat_camera_failed)
+    val fileFailed = stringResource(R.string.chat_file_failed)
+
     val imagePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
@@ -125,13 +130,61 @@ fun ChatScreen(onOpenDrawer: () -> Unit, viewModel: ChatViewModel = viewModel())
         // Import happens right away: the picker's read permission on the URI expires,
         // the copy in our own storage does not.
         viewModel.importImage(context, uri) { path ->
-            pendingImage = path
+            pending = path?.let { PendingAttachment(it, AttachmentKind.IMAGE) }
             importing = false
         }
     }
 
-    val feedback = LocalFeedback.current
-    val recordingFailed = stringResource(R.string.voice_record_failed)
+    val cameraCapture = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture(),
+    ) { taken ->
+        val file = cameraTarget
+        cameraTarget = null
+        if (!taken || file == null) {
+            // Cancelled in the camera app — the empty placeholder file must not stay.
+            file?.delete()
+            return@rememberLauncherForActivityResult
+        }
+        importing = true
+        // Same path as the picker: the raw shot is downscaled into a fresh file, the
+        // full-resolution original is dropped right after.
+        viewModel.importImage(context, Uri.fromFile(file)) { path ->
+            file.delete()
+            pending = path?.let { PendingAttachment(it, AttachmentKind.IMAGE) }
+            importing = false
+        }
+    }
+
+    val filePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        importing = true
+        // Same reason as for photos: the picker's read permission on the URI is
+        // short-lived, the copy in our own storage is not.
+        viewModel.importFile(context, uri) { path ->
+            pending = path?.let { PendingAttachment(it, AttachmentKind.FILE) }
+            importing = false
+            if (path == null) feedback.show(fileFailed)
+        }
+    }
+
+    // The photo is taken by the camera app via ACTION_IMAGE_CAPTURE, which needs no
+    // CAMERA permission as long as the manifest does not declare one.
+    fun launchCamera() {
+        val file = Attachments.newFile(context, "jpg")
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file,
+        )
+        cameraTarget = file
+        runCatching { cameraCapture.launch(uri) }.onFailure {
+            cameraTarget = null
+            file.delete()
+            feedback.show(cameraFailed)
+        }
+    }
 
     fun startRecording() {
         val file = Attachments.newFile(context, "wav")
@@ -175,7 +228,7 @@ fun ChatScreen(onOpenDrawer: () -> Unit, viewModel: ChatViewModel = viewModel())
             Box(Modifier.weight(1f)) {
                 ScreenHeader(
                     title = stringResource(R.string.tab_chat),
-                    subtitle = "",
+                    subtitle = null,
                     onOpenDrawer = onOpenDrawer,
                 )
             }
@@ -243,27 +296,6 @@ fun ChatScreen(onOpenDrawer: () -> Unit, viewModel: ChatViewModel = viewModel())
                 )
             }
         }
-        // Right above the input, where it is read just before sending.
-        // [AnimatedVisibility] makes the line fade + slide when the user switches modes,
-        // instead of snapping in or out: research mode is a real cost upgrade (Sonnet +
-        // web search), the warning arriving with a soft step gets attention without being
-        // startling. Falls back to plain if/else if Compose animation has not started yet.
-        AnimatedVisibility(
-            visible = mode.isCostly,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically(),
-            label = "chat-costly-hint",
-        ) {
-            Text(
-                stringResource(R.string.chat_mode_costly_hint),
-                style = MaterialTheme.typography.labelSmall,
-                color = PlannerColors.overdue,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(PlannerColors.background)
-                    .padding(start = 20.dp, end = 20.dp, top = 4.dp),
-            )
-        }
         // One rounded container holds the text and the actions — the field spans the
         // full width instead of competing with the buttons for it.
         Column(
@@ -277,131 +309,242 @@ fun ChatScreen(onOpenDrawer: () -> Unit, viewModel: ChatViewModel = viewModel())
                 .border(1.dp, PlannerColors.outline, RoundedCornerShape(22.dp))
                 .padding(top = 4.dp, bottom = 6.dp),
         ) {
-            pendingImage?.let { path ->
-                PendingImagePreview(path = path, onRemove = {
-                    Attachments.delete(path)
-                    pendingImage = null
+            pending?.let { attachment ->
+                PendingAttachmentPreview(attachment = attachment, onRemove = {
+                    Attachments.delete(attachment.path)
+                    pending = null
                 })
             }
-            val canSend = input.isNotBlank() || pendingImage != null
-            // Text and controls share one row instead of stacking in two: the image-upload
-            // button sits above the send button on the right, so the field gets the full
-            // row width for text instead of a dedicated button row underneath eating into it.
+            val canSend = input.isNotBlank() || pending != null
+            // Text on top, actions in one row at the bottom right: the text gets the
+            // full container width, and both buttons sit side by side on one baseline
+            // instead of being stacked in a column beside the field.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+            ) {
+                if (recording) {
+                    RecordingIndicator(
+                        elapsedMs = recordedMs,
+                        level = level,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp),
+                    )
+                } else {
+                    val hintRes = when (mode) {
+                        ChatMode.CAPTURE -> R.string.chat_input_hint
+                        ChatMode.ASK -> R.string.chat_hint_ask
+                        ChatMode.REVIEW -> R.string.chat_hint_review
+                        ChatMode.RESEARCH -> R.string.chat_hint_research
+                        ChatMode.STRUCTURE -> R.string.chat_hint_structure
+                    }
+                    OutlinedTextField(
+                        value = input,
+                        onValueChange = { input = it },
+                        placeholder = {
+                            Text(stringResource(hintRes), color = PlannerColors.muted)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 6,
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedBorderColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedTextColor = PlannerColors.text,
+                            focusedTextColor = PlannerColors.text,
+                            cursorColor = PlannerColors.primary,
+                        ),
+                    )
+                }
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 8.dp, end = 8.dp),
-                verticalAlignment = Alignment.Bottom,
+                    .padding(start = 8.dp, end = 8.dp, bottom = 2.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.weight(1f)) {
-                    if (recording) {
-                        RecordingIndicator(
-                            elapsedMs = recordedMs,
-                            level = level,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp),
-                        )
-                    } else {
-                        val hintRes = when (mode) {
-                            ChatMode.CAPTURE -> R.string.chat_input_hint
-                            ChatMode.ASK -> R.string.chat_hint_ask
-                            ChatMode.REVIEW -> R.string.chat_hint_review
-                            ChatMode.RESEARCH -> R.string.chat_hint_research
-                            ChatMode.STRUCTURE -> R.string.chat_hint_structure
+                if (recording) {
+                    // Discarding a recording must be possible without sending it.
+                    ChatActionButton(
+                        onClick = {
+                            recording = false
+                            recorder.cancel()
+                        },
+                        background = PlannerColors.background,
+                        border = PlannerColors.outline,
+                    ) {
+                        TrashIcon(tint = PlannerColors.overdue)
+                    }
+                } else {
+                    // One button, two sources: tapping opens a short menu instead of
+                    // going straight to the gallery, so the camera is one tap away too.
+                    Box {
+                        ChatActionButton(
+                            onClick = { attachMenu = true },
+                            background = PlannerColors.background,
+                            border = PlannerColors.outline,
+                            enabled = !importing,
+                        ) {
+                            // A plus, not a photo icon: the button covers camera, gallery
+                            // and any file now.
+                            PlusIcon(tint = if (importing) PlannerColors.faint else PlannerColors.muted)
                         }
-                        OutlinedTextField(
-                            value = input,
-                            onValueChange = { input = it },
-                            placeholder = {
-                                Text(stringResource(hintRes), color = PlannerColors.muted)
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            maxLines = 6,
-                            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                                unfocusedBorderColor = Color.Transparent,
-                                focusedBorderColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedTextColor = PlannerColors.text,
-                                focusedTextColor = PlannerColors.text,
-                                cursorColor = PlannerColors.primary,
-                            ),
-                        )
+                        androidx.compose.material3.DropdownMenu(
+                            expanded = attachMenu,
+                            onDismissRequest = { attachMenu = false },
+                            containerColor = PlannerColors.surface,
+                        ) {
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        stringResource(R.string.chat_attach_camera),
+                                        color = PlannerColors.text,
+                                    )
+                                },
+                                leadingIcon = { CameraIcon(tint = PlannerColors.muted) },
+                                onClick = {
+                                    attachMenu = false
+                                    launchCamera()
+                                },
+                            )
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        stringResource(R.string.chat_attach_gallery),
+                                        color = PlannerColors.text,
+                                    )
+                                },
+                                leadingIcon = { ImageIcon(tint = PlannerColors.muted) },
+                                onClick = {
+                                    attachMenu = false
+                                    imagePicker.launch(
+                                        PickVisualMediaRequest(
+                                            ActivityResultContracts.PickVisualMedia.ImageOnly,
+                                        ),
+                                    )
+                                },
+                            )
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        stringResource(R.string.chat_attach_file),
+                                        color = PlannerColors.text,
+                                    )
+                                },
+                                leadingIcon = { FileIcon(tint = PlannerColors.muted) },
+                                onClick = {
+                                    attachMenu = false
+                                    // Everything is offered; what can actually be read out
+                                    // is decided during extraction, see [Documents].
+                                    filePicker.launch(arrayOf("*/*"))
+                                },
+                            )
+                        }
                     }
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (recording) {
-                        // Discarding a recording must be possible without sending it.
-                        androidx.compose.material3.IconButton(
-                            onClick = {
-                                recording = false
-                                recorder.cancel()
-                            },
-                            // Compact, like the header menu button (HitTarget.compactHeader):
-                            // stacked above the 40 dp send circle, a full 48 dp target here
-                            // would make the button column taller than is worth it.
-                            modifier = Modifier.size(HitTarget.compactHeader),
-                        ) {
-                            TrashIcon(tint = PlannerColors.overdue)
-                        }
-                    } else {
-                        androidx.compose.material3.IconButton(
-                            onClick = {
-                                imagePicker.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                Spacer(Modifier.width(8.dp))
+                // Mic until there is something to send — same slot, so the thumb never
+                // has to move between recording and sending.
+                ChatActionButton(
+                    onClick = {
+                        when {
+                            recording -> finishRecording()
+                            canSend -> {
+                                viewModel.submit(
+                                    input,
+                                    pending?.path,
+                                    pending?.kind ?: AttachmentKind.NONE
                                 )
-                            },
-                            enabled = !importing,
-                            modifier = Modifier.size(HitTarget.compactHeader),
-                        ) {
-                            ImageIcon(tint = if (importing) PlannerColors.faint else PlannerColors.muted)
-                        }
-                    }
-                    Spacer(Modifier.height(2.dp))
-                    // Mic until there is something to send — same slot, so the thumb never
-                    // has to move between recording and sending.
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(if (recording) PlannerColors.overdue else PlannerColors.primary),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        androidx.compose.material3.IconButton(onClick = {
-                            when {
-                                recording -> finishRecording()
-                                canSend -> {
-                                    viewModel.submit(input, pendingImage)
-                                    input = ""
-                                    pendingImage = null
-                                }
+                                input = ""
+                                pending = null
+                            }
 
-                                else -> {
-                                    val granted = ContextCompat.checkSelfPermission(
-                                        context,
-                                        Manifest.permission.RECORD_AUDIO,
-                                    ) == PackageManager.PERMISSION_GRANTED
-                                    if (granted) {
-                                        startRecording()
-                                    } else {
-                                        micPermission.launch(Manifest.permission.RECORD_AUDIO)
-                                    }
+                            else -> {
+                                val granted = ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.RECORD_AUDIO,
+                                ) == PackageManager.PERMISSION_GRANTED
+                                if (granted) {
+                                    startRecording()
+                                } else {
+                                    micPermission.launch(Manifest.permission.RECORD_AUDIO)
                                 }
                             }
-                        }) {
-                            when {
-                                recording -> StopIcon(tint = PlannerColors.onPrimary)
-                                canSend -> SendIcon(tint = PlannerColors.onPrimary)
-                                else -> MicIcon(tint = PlannerColors.onPrimary)
-                            }
                         }
+                    },
+                    background = if (recording) PlannerColors.overdue else PlannerColors.primary,
+                ) {
+                    when {
+                        recording -> StopIcon(tint = PlannerColors.onPrimary)
+                        canSend -> SendIcon(tint = PlannerColors.onPrimary)
+                        else -> MicIcon(tint = PlannerColors.onPrimary)
                     }
                 }
             }
         }
     }
 }
+
+/**
+ * One shared style for both actions in the chat input: same 40 dp circle, same icon
+ * slot — only the fill differs, so the attach/discard button reads as a sibling of the
+ * send button rather than a loose icon next to it.
+ */
+@Composable
+private fun ChatActionButton(
+    onClick: () -> Unit,
+    background: Color,
+    enabled: Boolean = true,
+    border: Color? = null,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(background)
+            .then(if (border != null) Modifier.border(1.dp, border, CircleShape) else Modifier),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.material3.IconButton(onClick = onClick, enabled = enabled) {
+            content()
+        }
+    }
+}
+
+
+/**
+ * Attached document inside a sent message. There is nothing to show of the file itself —
+ * the name is what the user recognizes it by; the extracted text is in the bubble anyway.
+ */
+@Composable
+private fun AttachmentFileRow(name: String) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(PlannerColors.onPrimary.copy(alpha = 0.15f))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        FileIcon(tint = PlannerColors.onPrimary)
+        Spacer(Modifier.width(8.dp))
+        Text(
+            name,
+            style = MaterialTheme.typography.bodySmall,
+            color = PlannerColors.onPrimary,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** Attachment picked but not sent yet: the imported copy plus what kind of thing it is. */
+private data class PendingAttachment(val path: String, val kind: AttachmentKind)
 
 /** Running recording: red dot, elapsed time, live level. */
 @Composable
@@ -434,26 +577,55 @@ private fun RecordingIndicator(elapsedMs: Long, level: Float, modifier: Modifier
 
 /** Picked but unsent photo — sits inside the input container, above the text. */
 @Composable
-private fun PendingImagePreview(path: String, onRemove: () -> Unit) {
+private fun PendingAttachmentPreview(attachment: PendingAttachment, onRemove: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
             .padding(start = 14.dp, end = 8.dp, top = 8.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AttachmentImage(
-            path = path,
-            modifier = Modifier
-                .size(52.dp)
-                .clip(RoundedCornerShape(10.dp)),
-        )
+        if (attachment.kind == AttachmentKind.IMAGE) {
+            AttachmentImage(
+                path = attachment.path,
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(10.dp)),
+            )
+        } else {
+            // A document has no thumbnail — the icon plus its name is what identifies it.
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(PlannerColors.background),
+                contentAlignment = Alignment.Center,
+            ) {
+                FileIcon(tint = PlannerColors.muted)
+            }
+        }
         Spacer(Modifier.width(12.dp))
-        Text(
-            stringResource(R.string.chat_image_attached),
-            style = MaterialTheme.typography.bodySmall,
-            color = PlannerColors.muted,
-            modifier = Modifier.weight(1f),
-        )
+        Column(Modifier.weight(1f)) {
+            if (attachment.kind == AttachmentKind.FILE) {
+                Text(
+                    Attachments.fileName(attachment.path),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = PlannerColors.text,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+            }
+            Text(
+                stringResource(
+                    if (attachment.kind == AttachmentKind.FILE) {
+                        R.string.chat_file_attached
+                    } else {
+                        R.string.chat_image_attached
+                    },
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = PlannerColors.muted,
+            )
+        }
         androidx.compose.material3.IconButton(
             onClick = onRemove,
             // Hit target migration: was 36 dp. Pending-image-preview Row grows by
@@ -571,12 +743,6 @@ private fun ClearChatDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     )
 }
 
-/**
- * Research is the only function that runs on the strong model with web search — the others
- * answer on Haiku from the user's own data.
- */
-private val ChatMode.isCostly: Boolean get() = this == ChatMode.RESEARCH
-
 /** Readable label for a chat function. */
 private fun modeLabelRes(mode: ChatMode): Int = when (mode) {
     ChatMode.CAPTURE -> R.string.chat_mode_capture
@@ -593,25 +759,11 @@ private fun modeLabelRes(mode: ChatMode): Int = when (mode) {
 @Composable
 private fun ModeDropdown(mode: ChatMode, onSelect: (ChatMode) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    // The mode now stays selected, so being stuck in the expensive one must be visible
-    // at a glance — it costs a Sonnet call with web search per message.
-    val costly = mode.isCostly
-    // Animated hover colour for the chevron: snaps lend the dropdown a slightly buggy
-    // feel when the user steps through modes; a 150 ms fade matches the rest of the
-    // chat micro-animations (costly hint slide-fade above).
-    val chevronTint by animateColorAsState(
-        targetValue = if (costly) PlannerColors.overdue else PlannerColors.muted,
-        animationSpec = androidx.compose.animation.core.tween(durationMillis = 150),
-        label = "mode-chevron",
-    )
     Box {
         androidx.compose.material3.OutlinedButton(
             onClick = { expanded = true },
             shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(
-                if (costly) 1.5.dp else 1.dp,
-                if (costly) PlannerColors.overdue else PlannerColors.outline,
-            ),
+            border = BorderStroke(1.dp, PlannerColors.outline),
             colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
                 containerColor = PlannerColors.surface,
             ),
@@ -620,12 +772,12 @@ private fun ModeDropdown(mode: ChatMode, onSelect: (ChatMode) -> Unit) {
             Text(
                 stringResource(modeLabelRes(mode)),
                 style = MaterialTheme.typography.labelLarge,
-                color = if (costly) PlannerColors.overdue else PlannerColors.text,
+                color = PlannerColors.text,
                 maxLines = 1,
             )
             Spacer(Modifier.width(6.dp))
             Box(Modifier.rotate(-90f)) {
-                BackChevronIcon(tint = chevronTint)
+                BackChevronIcon(tint = PlannerColors.muted)
             }
         }
         androidx.compose.material3.DropdownMenu(
@@ -636,10 +788,7 @@ private fun ModeDropdown(mode: ChatMode, onSelect: (ChatMode) -> Unit) {
             ChatMode.entries.forEach { m ->
                 androidx.compose.material3.DropdownMenuItem(
                     text = {
-                        Text(
-                            stringResource(modeLabelRes(m)),
-                            color = if (m.isCostly) PlannerColors.overdue else PlannerColors.text,
-                        )
+                        Text(stringResource(modeLabelRes(m)), color = PlannerColors.text)
                     },
                     onClick = {
                         onSelect(m)
@@ -704,6 +853,11 @@ private fun ChatBubbles(
                         tint = PlannerColors.onPrimary,
                     )
                     if (capture.rawText.isNotBlank()) Spacer(Modifier.height(6.dp))
+                }
+
+                AttachmentKind.FILE -> capture.attachmentPath?.let { path ->
+                    AttachmentFileRow(name = Attachments.fileName(path))
+                    Spacer(Modifier.height(8.dp))
                 }
 
                 AttachmentKind.NONE -> Unit
