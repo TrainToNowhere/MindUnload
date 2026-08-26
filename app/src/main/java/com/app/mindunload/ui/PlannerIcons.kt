@@ -667,6 +667,69 @@ fun ImageIcon(modifier: Modifier = Modifier, tint: Color = Color.Unspecified) {
 }
 
 @Composable
+fun PlusIcon(modifier: Modifier = Modifier, tint: Color = Color.Unspecified) {
+    IconCanvas(modifier, tint) { scale, sw ->
+        drawLine(tint, pt(12f, 5.5f, scale), pt(12f, 18.5f, scale), sw, StrokeCap.Round)
+        drawLine(tint, pt(5.5f, 12f, scale), pt(18.5f, 12f, scale), sw, StrokeCap.Round)
+    }
+}
+
+@Composable
+fun FileIcon(modifier: Modifier = Modifier, tint: Color = Color.Unspecified) {
+    IconCanvas(modifier, tint) { scale, sw ->
+        // Sheet with a folded corner, plus two text lines.
+        val sheet = androidx.compose.ui.graphics.Path().apply {
+            moveTo(13.5f * scale, 3.5f * scale)
+            lineTo(6.5f * scale, 3.5f * scale)
+            lineTo(6.5f * scale, 20.5f * scale)
+            lineTo(17.5f * scale, 20.5f * scale)
+            lineTo(17.5f * scale, 7.5f * scale)
+            close()
+        }
+        drawPath(
+            sheet,
+            tint,
+            style = Stroke(
+                width = sw,
+                join = androidx.compose.ui.graphics.StrokeJoin.Round,
+            ),
+        )
+        drawLine(tint, pt(13.5f, 3.5f, scale), pt(13.5f, 7.5f, scale), sw, StrokeCap.Round)
+        drawLine(tint, pt(13.5f, 7.5f, scale), pt(17.5f, 7.5f, scale), sw, StrokeCap.Round)
+        drawLine(tint, pt(9.5f, 12.5f, scale), pt(14.5f, 12.5f, scale), sw, StrokeCap.Round)
+        drawLine(tint, pt(9.5f, 16f, scale), pt(14.5f, 16f, scale), sw, StrokeCap.Round)
+    }
+}
+
+@Composable
+fun CameraIcon(modifier: Modifier = Modifier, tint: Color = Color.Unspecified) {
+    IconCanvas(modifier, tint) { scale, sw ->
+        // Viewfinder bump, body, lens — same 24x24 grid and stroke as [ImageIcon], so
+        // the two read as one pair in the attachment menu.
+        drawRoundRect(
+            tint,
+            topLeft = pt(9f, 4.5f, scale),
+            size = Size(6f * scale, 3.5f * scale),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.5f * scale, 1.5f * scale),
+            style = Stroke(width = sw),
+        )
+        drawRoundRect(
+            tint,
+            topLeft = pt(3.5f, 7f, scale),
+            size = Size(17f * scale, 12.5f * scale),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(3f * scale, 3f * scale),
+            style = Stroke(width = sw),
+        )
+        drawCircle(
+            tint,
+            radius = 3.4f * scale,
+            center = pt(12f, 13.4f, scale),
+            style = Stroke(width = sw)
+        )
+    }
+}
+
+@Composable
 fun PlayIcon(modifier: Modifier = Modifier, tint: Color = Color.Unspecified) {
     IconCanvas(modifier, tint) { scale, _ ->
         val triangle = androidx.compose.ui.graphics.Path().apply {

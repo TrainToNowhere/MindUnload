@@ -1,5 +1,7 @@
 package com.app.mindunload.ui
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,8 +25,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import com.app.mindunload.R
 import com.app.mindunload.data.PlannerItem
 import com.app.mindunload.data.Priority
@@ -68,7 +68,9 @@ fun ScreenHeader(title: String, subtitle: String?, onOpenDrawer: () -> Unit) {
                 style = MaterialTheme.typography.headlineSmall.copy(fontStyle = FontStyle.Italic),
                 color = PlannerColors.text,
             )
-            if (subtitle != null) {
+            // Blank counts as absent: an empty subtitle would still add its line and the
+            // 2 dp gap, which pushes the title above the center of the header row.
+            if (!subtitle.isNullOrBlank()) {
                 // 2 dp, not [Spacing.xs] — reserved for "no perceptible gap" between a
                 // heading and its helper line.
                 Spacer(Modifier.size(2.dp))

@@ -23,9 +23,11 @@ import com.app.mindunload.ai.toPriorityOrNull
 import com.app.mindunload.ai.toRelation
 import com.app.mindunload.ai.toRelationOrDefault
 import com.app.mindunload.data.AttachmentKind
+import com.app.mindunload.data.Attachments
 import com.app.mindunload.data.CaptureStatus
 import com.app.mindunload.data.ChatMessage
 import com.app.mindunload.data.ChatMode
+import com.app.mindunload.data.Documents
 import com.app.mindunload.data.ItemLink
 import com.app.mindunload.data.ItemType
 import com.app.mindunload.data.LinkOrigin
@@ -74,9 +76,9 @@ class CaptureWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         for (pending in repo.captureDao.pendingOnce()) {
             repo.captureDao.setStatus(pending.id, CaptureStatus.PROCESSING)
             try {
-                // Photo messages first become text; everything after this point works on
-                // plain text and does not care where it came from.
-                val capture = extractImageText(repo, claude, pending)
+                // Photo and file messages first become text; everything after this point
+                // works on plain text and does not care where it came from.
+                val capture = extractAttachmentText(repo, claude, pending)
 
                 // Chat functions (ask/review/research) return a free-text answer
                 // instead of the structured-output capture — same outbox, same retries.
@@ -203,37 +205,82 @@ class CaptureWorker(context: Context, params: WorkerParameters) : CoroutineWorke
     }
 
     /**
-     * Photo message → text. Reads the stored JPEG, has the model transcribe it and writes the
-     * result back into the capture, so the chat bubble shows what is actually being
-     * processed. A caption typed alongside the photo stays in front of it — it is the
+     * Photo or file message → text. Reads the stored attachment, turns it into text and
+     * writes the result back into the capture, so the chat bubble shows what is actually
+     * being processed. A caption typed alongside it stays in front — it is the
      * instruction ("auf die Einkaufsliste"), the extracted text is the material.
      *
-     * Returns the capture unchanged when there is nothing to extract (no photo, or the
-     * extraction already ran on an earlier attempt).
+     * Returns the capture unchanged when there is nothing to extract (plain text or a
+     * voice message, or the extraction already ran on an earlier attempt).
      */
-    private suspend fun extractImageText(
+    private suspend fun extractAttachmentText(
         repo: PlannerRepository,
         claude: com.app.mindunload.ai.AiService,
         capture: com.app.mindunload.data.CaptureRequest,
     ): com.app.mindunload.data.CaptureRequest {
-        if (capture.attachmentKind != AttachmentKind.IMAGE || capture.attachmentExtracted) {
-            return capture
-        }
+        val kind = capture.attachmentKind
+        if (kind != AttachmentKind.IMAGE && kind != AttachmentKind.FILE) return capture
+        if (capture.attachmentExtracted) return capture
+
         val file = capture.attachmentPath?.let { java.io.File(it) }
         if (file == null || !file.exists()) {
-            // The photo is gone (cleared storage, restored backup) — process the caption
-            // alone instead of failing the message forever.
+            // The attachment is gone (cleared storage, restored backup) — process the
+            // caption alone instead of failing the message forever.
             repo.captureDao.setExtractedText(capture.id, capture.rawText)
             return capture.copy(attachmentExtracted = true)
         }
-        val base64 = android.util.Base64.encodeToString(file.readBytes(), android.util.Base64.NO_WRAP)
-        val extracted = claude.extractTextFromImage(base64)
-            .ifBlank { applicationContext.getString(R.string.image_no_text) }
+        val extracted = when (kind) {
+            AttachmentKind.IMAGE -> {
+                val base64 =
+                    android.util.Base64.encodeToString(
+                        file.readBytes(),
+                        android.util.Base64.NO_WRAP
+                    )
+                claude.extractTextFromImage(base64)
+                    .ifBlank { applicationContext.getString(R.string.image_no_text) }
+            }
+
+            else -> extractDocumentText(claude, file)
+        }
         val combined = listOf(capture.rawText.trim(), extracted)
             .filter { it.isNotBlank() }
             .joinToString("\n\n")
         repo.captureDao.setExtractedText(capture.id, combined)
         return capture.copy(rawText = combined, attachmentExtracted = true)
+    }
+
+    /**
+     * Attached document → text, by whatever route the file allows ([Documents]): a text
+     * file is inlined without any API call, a PDF or image file goes through the same
+     * OCR call as a photo, anything else says so instead of silently dropping the file.
+     * The file name is kept in front of the content — it is often the only thing that
+     * says what the document is ("Rechnung_Stadtwerke.pdf").
+     */
+    private suspend fun extractDocumentText(
+        claude: com.app.mindunload.ai.AiService,
+        file: java.io.File,
+    ): String {
+        val name = Attachments.fileName(file.absolutePath)
+        val header = applicationContext.getString(R.string.file_text_header, name)
+        return when (val document = Documents.classify(file)) {
+            is Documents.Kind.Text -> "$header\n\n${document.content.trim()}"
+
+            is Documents.Kind.Pages -> {
+                val text = claude
+                    .extractTextFromPages(document.base64, document.mediaType, name)
+                    .ifBlank { applicationContext.getString(R.string.file_no_text) }
+                buildString {
+                    append(header).append("\n\n").append(text)
+                    if (document.truncated) {
+                        append("\n\n")
+                        append(applicationContext.getString(R.string.file_pages_truncated))
+                    }
+                }
+            }
+
+            Documents.Kind.Unsupported ->
+                applicationContext.getString(R.string.file_unsupported, name)
+        }
     }
 
     /**

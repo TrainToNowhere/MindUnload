@@ -311,24 +311,45 @@ class AiService(
     suspend fun extractTextFromImage(
         imageBase64: String,
         mediaType: String = "image/jpeg",
+    ): String = extractTextFromPages(listOf(imageBase64), mediaType)
+
+    /**
+     * The same OCR call for several images at once — the rendered pages of an attached
+     * PDF (see [com.app.mindunload.data.Documents]). [documentName] tells the model what
+     * the pages belong to; without it a multi-page transcript reads like unrelated
+     * photos. Pure text documents never get here — they need no model at all.
+     */
+    suspend fun extractTextFromPages(
+        pages: List<String>,
+        mediaType: String = "image/jpeg",
+        documentName: String? = null,
     ): String = withContext(Dispatchers.IO) {
-        val content = JSONArray()
-            .put(
-                JSONObject().put("type", "text")
-                    .put("text", prompts.withLanguageRule(R.raw.prompt_image_text)),
-            )
-            .put(
+        if (pages.isEmpty()) return@withContext ""
+        val instruction = buildString {
+            append(prompts.withLanguageRule(R.raw.prompt_image_text))
+            if (documentName != null) {
+                append("\n\nThe ${pages.size} image(s) below are the pages of the attached ")
+                append("document \"$documentName\", in reading order. Transcribe every page, ")
+                append("keep the order and separate the pages with a blank line.")
+            }
+        }
+        val content = JSONArray().put(JSONObject().put("type", "text").put("text", instruction))
+        pages.forEach { page ->
+            content.put(
                 JSONObject().put("type", "image_url")
                     .put(
                         "image_url",
-                        JSONObject().put("url", "data:$mediaType;base64,$imageBase64"),
+                        JSONObject().put("url", "data:$mediaType;base64,$page"),
                     ),
             )
+        }
         val response = postChat(
             model = settings.fastModel,
             system = null,
             messages = listOf(JSONObject().put("role", "user").put("content", content)),
-            maxTokens = 2048L,
+            // Per page, but capped: a long document is truncated rather than paid for
+            // in full — the page ceiling in [Documents] already limits how much arrives.
+            maxTokens = (2048L * pages.size).coerceAtMost(8192L),
         )
         logUsage("extractTextFromImage", response)
         textOf(response).trim()

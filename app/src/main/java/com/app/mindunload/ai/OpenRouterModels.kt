@@ -1,5 +1,6 @@
 package com.app.mindunload.ai
 
+import com.app.mindunload.ai.OpenRouterModels.fetchCatalog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -7,8 +8,18 @@ import okhttp3.Request
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
-/** One OpenRouter model available for selection — see [OpenRouterModels.fetchCatalog]. */
-data class OpenRouterModel(val id: String, val label: String, val provider: String)
+/**
+ * One OpenRouter model available for selection — see [OpenRouterModels.fetchCatalog].
+ * The two prices are US dollars per million tokens (OpenRouter reports per token), null
+ * when the catalog entry carries no pricing; 0.0 is a genuinely free model.
+ */
+data class OpenRouterModel(
+    val id: String,
+    val label: String,
+    val provider: String,
+    val inputPricePerMillion: Double? = null,
+    val outputPricePerMillion: Double? = null,
+)
 
 /**
  * Loads the currently available OpenRouter models from https://openrouter.ai/api/v1/models
@@ -42,11 +53,19 @@ object OpenRouterModels {
             if (!resp.isSuccessful) throw AiServiceException(resp.code, resp.message)
             resp.body?.string().orEmpty()
         }
+        parseCatalog(bodyText)
+    }
+
+    /**
+     * The filtering and ranking half of [fetchCatalog], split off from the HTTP call so
+     * it can be exercised against a fixed response.
+     */
+    internal fun parseCatalog(bodyText: String): List<OpenRouterModel> {
         val entries = JSONObject(bodyText).getJSONArray("data")
 
         data class Candidate(val created: Long, val model: OpenRouterModel)
 
-        (0 until entries.length()).asSequence()
+        return (0 until entries.length()).asSequence()
             .map { entries.getJSONObject(it) }
             .filter { m -> ALLOWED_PREFIXES.any { prefix -> m.getString("id").startsWith(prefix) } }
             // ":batch"/":free" suffixes are variants of the same model, not distinct choices.
@@ -61,7 +80,17 @@ object OpenRouterModels {
                 val name = m.optString("name", id)
                 val provider = name.substringBefore(": ", missingDelimiterValue = id.substringBefore("/"))
                 val label = name.substringAfter(": ", missingDelimiterValue = name)
-                Candidate(m.optLong("created", 0L), OpenRouterModel(id, label, provider))
+                val pricing = m.optJSONObject("pricing")
+                Candidate(
+                    m.optLong("created", 0L),
+                    OpenRouterModel(
+                        id = id,
+                        label = label,
+                        provider = provider,
+                        inputPricePerMillion = pricePerMillion(pricing, "prompt"),
+                        outputPricePerMillion = pricePerMillion(pricing, "completion"),
+                    ),
+                )
             }
             .groupBy { it.model.provider }
             .values
@@ -70,6 +99,10 @@ object OpenRouterModels {
             .sortedWith(compareBy({ it.provider }, { it.label }))
             .toList()
     }
+
+    /** OpenRouter quotes prices per token as a string; the picker shows them per million. */
+    private fun pricePerMillion(pricing: JSONObject?, key: String): Double? =
+        pricing?.optString(key)?.toDoubleOrNull()?.times(1_000_000)
 
     fun labelFor(id: String, catalog: List<OpenRouterModel>): String =
         catalog.find { it.id == id }?.let { "${it.provider} · ${it.label}" } ?: id

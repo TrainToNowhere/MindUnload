@@ -31,8 +31,12 @@ enum class CaptureStatus { TRANSCRIBING, PENDING, PROCESSING, DONE, FAILED }
  */
 enum class ChatMode { CAPTURE, ASK, REVIEW, RESEARCH, STRUCTURE }
 
-/** What is attached to a chat message besides its text — see [CaptureRequest.attachmentPath]. */
-enum class AttachmentKind { NONE, IMAGE, AUDIO }
+/**
+ * What is attached to a chat message besides its text — see [CaptureRequest.attachmentPath].
+ * FILE is any picked document (PDF, text, image file); how its text is extracted is
+ * decided by [Documents].
+ */
+enum class AttachmentKind { NONE, IMAGE, AUDIO, FILE }
 
 /**
  * Named accent theme, picked in Settings → Design. Only the accent-driven colors (primary,

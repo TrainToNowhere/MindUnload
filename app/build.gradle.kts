@@ -91,6 +91,9 @@ dependencies {
     implementation(libs.jackson.databind)
 
     testImplementation(libs.junit)
+    // org.json is only a stub in the unit-test android.jar; the real one lets the
+    // catalog parsing be tested without a device.
+    testImplementation(libs.json)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }
