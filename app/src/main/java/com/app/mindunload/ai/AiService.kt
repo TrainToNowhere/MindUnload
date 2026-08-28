@@ -51,12 +51,31 @@ interface BacklogTools {
     /** All open entries, optionally of one type — "welche Aufgaben habe ich noch?". */
     suspend fun open(type: ItemType?): List<PlannerItem>
 
-    /** Dated, open entries whose dueAt falls into [fromMillis, toMillis]. */
-    suspend fun agenda(fromMillis: Long, toMillis: Long): List<PlannerItem>
+    /**
+     * Dated entries whose dueAt falls into [fromMillis, toMillis]. [includeDone] is what
+     * makes past periods answerable: appointments that have taken place are closed
+     * automatically and would otherwise be filtered out.
+     */
+    suspend fun agenda(fromMillis: Long, toMillis: Long, includeDone: Boolean): List<PlannerItem>
+
+    /**
+     * Completed entries whose doneAt falls into [fromMillis, toMillis] — "was habe ich
+     * letzte Woche erledigt?". Completed entries are kept forever, only hidden from the
+     * lists, so this always has the full history to work with.
+     */
+    suspend fun done(fromMillis: Long, toMillis: Long, type: ItemType?): List<PlannerItem>
 }
 
-/** One earlier exchange in a multi-turn chat mode — see [AiService.structureThoughts]. */
-data class ThoughtTurn(val userText: String, val assistantText: String)
+/**
+ * One earlier exchange in a multi-turn chat mode. [createdAt] is what keeps relative dates
+ * honest: "was steht morgen an?" from an earlier turn points at a different day than the
+ * same words asked now, so modes that deal in dates stamp their history with it.
+ */
+data class ConversationTurn(
+    val userText: String,
+    val assistantText: String,
+    val createdAt: Long = 0L,
+)
 
 /**
  * Talks to whichever provider/model the user picked in Settings via OpenRouter's
@@ -116,8 +135,10 @@ class AiService(
 
     /**
      * Chat mode "Ask": answers queries/summaries over the user's own data —
-     * tasks on a topic, appointments, goals, knowledge, day planning. Gets the upcoming
-     * appointments/due tasks as context and looks up everything else itself via tools.
+     * tasks on a topic, appointments, goals, knowledge, day planning, and retrospectives
+     * over a period (the former review mode). Gets the upcoming appointments/due tasks as
+     * context and looks up everything else itself via tools. [history] carries the earlier
+     * turns of the same conversation so follow-up questions work.
      */
     suspend fun answerQuery(
         question: String,
@@ -125,6 +146,7 @@ class AiService(
         upcomingAppointments: List<PlannerItem>,
         openTasks: List<PlannerItem>,
         openCounts: Map<ItemType, Int> = emptyMap(),
+        history: List<ConversationTurn> = emptyList(),
         now: LocalDateTime = LocalDateTime.now(),
     ): String = withContext(Dispatchers.IO) {
         fun line(item: PlannerItem): String {
@@ -165,10 +187,20 @@ class AiService(
             model = settings.fastModel,
             system = prompts.withLanguageRule(R.raw.prompt_ask_system),
             userText = userMessage,
-            tools = listOf(SEARCH_ITEMS_TOOL, LIST_RECENT_TOOL, LIST_OPEN_TOOL, LIST_AGENDA_TOOL),
+            tools = listOf(
+                SEARCH_ITEMS_TOOL,
+                LIST_RECENT_TOOL,
+                LIST_OPEN_TOOL,
+                LIST_AGENDA_TOOL,
+                LIST_DONE_TOOL,
+            ),
             backlogTools = tools,
             feature = "askChat",
             maxTokens = 2048L,
+            // Time-stamped: a follow-up ("und übermorgen?") only makes sense with the
+            // earlier turns present, and only resolves correctly when the model can see
+            // that "morgen" in an older turn was anchored to an older day.
+            priorMessages = historyMessages(history, stampTime = true),
         )
         textOf(response).ifBlank { throw IllegalStateException("Empty answer") }
     }
@@ -183,13 +215,11 @@ class AiService(
      */
     suspend fun structureThoughts(
         text: String,
-        history: List<ThoughtTurn> = emptyList(),
+        history: List<ConversationTurn> = emptyList(),
     ): String = withContext(Dispatchers.IO) {
-        val messages = mutableListOf<JSONObject>()
-        history.forEach { turn ->
-            messages += userMessage(turn.userText)
-            messages += JSONObject().put("role", "assistant").put("content", turn.assistantText)
-        }
+        // No time stamps here: a train of thought is timeless, unlike a question about
+        // "tomorrow" — see [ConversationTurn.createdAt].
+        val messages = historyMessages(history, stampTime = false).toMutableList()
         messages += userMessage(text)
         val response = postChat(
             model = settings.fastModel,
@@ -240,64 +270,6 @@ class AiService(
         val json = textOf(response)
             .ifBlank { throw IllegalStateException("Empty response from model") }
         MAPPER.readValue(json, CleanupResult::class.java).suggestions
-    }
-
-    /**
-     * Review: reflective report over a period (week/month/year) from completed,
-     * newly captured, occurred and archived entries.
-     * Runs on the strong model — reflection quality matters here.
-     */
-    suspend fun generateReview(
-        items: List<PlannerItem>,
-        from: Long,
-        to: Long,
-        periodLabel: String,
-    ): String = withContext(Dispatchers.IO) {
-        fun fmt(ms: Long): String = LocalDateTime
-            .ofInstant(java.time.Instant.ofEpochMilli(ms), ZoneId.systemDefault())
-            .format(DateTimeFormatter.ofPattern("dd.MM."))
-
-        fun describe(item: PlannerItem): String = buildString {
-            append("- [${item.type.name.lowercase()}] ${item.title}")
-            item.category?.let { append(" (category: $it)") }
-            item.notes?.takeIf { item.type == ItemType.NOTE }?.let { append(" — ${it.take(140)}") }
-        }
-
-        val done = items.filter { it.doneAt != null && it.doneAt in from..to }
-        val happened =
-            items.filter { it.type == ItemType.APPOINTMENT && it.dueAt != null && it.dueAt in from..to }
-        val learned = items.filter { it.type == ItemType.NOTE && it.createdAt in from..to }
-        val created = items.filter {
-            it.createdAt in from..to && it !in done && it !in happened && it !in learned
-        }
-        val prompt = """
-            Period: $periodLabel (${fmt(from)} to ${fmt(to)})
-
-            Completed in this period:
-            ${
-            done.takeIf { it.isNotEmpty() }?.joinToString("\n") { describe(it) } ?: "none recorded"
-        }
-
-            Appointments/events in this period:
-            ${happened.takeIf { it.isNotEmpty() }?.joinToString("\n") { describe(it) } ?: "none"}
-
-            Newly learned knowledge (notes):
-            ${learned.takeIf { it.isNotEmpty() }?.joinToString("\n") { describe(it) } ?: "none"}
-
-            Newly captured (tasks/ideas/goals/shopping):
-            ${created.takeIf { it.isNotEmpty() }?.joinToString("\n") { describe(it) } ?: "none"}
-
-            ${prompts.withLanguageRule(R.raw.prompt_review)}
-        """.trimIndent()
-
-        val response = postChat(
-            model = settings.strongModel,
-            system = null,
-            messages = listOf(userMessage(prompt)),
-            maxTokens = 2048L,
-        )
-        logUsage("generateReview", response)
-        textOf(response).ifBlank { throw IllegalStateException("Empty review") }
     }
 
     /**
@@ -468,12 +440,23 @@ class AiService(
      * (the ":online" model suffix) instead of a provider-specific search tool — works the
      * same regardless of which underlying provider/model is selected. Used by [ResearchService].
      */
-    suspend fun researchAnswer(prompt: String, feature: String): String =
+    suspend fun researchAnswer(
+        prompt: String,
+        feature: String,
+        history: List<ConversationTurn> = emptyList(),
+    ): String =
         withContext(Dispatchers.IO) {
             val response = postChat(
                 model = "${settings.strongModel}:online",
                 system = null,
-                messages = listOf(userMessage(prompt)),
+                // Research answers are long and this runs on the strong model, so the
+                // history is truncated hard — enough for the model to know what was
+                // already covered, not enough to double the prompt on every follow-up.
+                messages = historyMessages(
+                    history,
+                    stampTime = true,
+                    maxAssistantChars = RESEARCH_HISTORY_ANSWER_CHARS,
+                ) + userMessage(prompt),
                 maxTokens = 4096L,
             )
             logUsage(feature, response)
@@ -484,6 +467,34 @@ class AiService(
 
     private fun userMessage(text: String): JSONObject =
         JSONObject().put("role", "user").put("content", text)
+
+    /**
+     * Renders earlier turns as the API's alternating user/assistant messages. [stampTime]
+     * prefixes each user text with the local time it was sent — without it the model
+     * resolves an old turn's "morgen" against today and answers for the wrong day.
+     * [maxAssistantChars] caps long answers (research) so a follow-up does not carry the
+     * whole previous report along.
+     */
+    private fun historyMessages(
+        history: List<ConversationTurn>,
+        stampTime: Boolean,
+        maxAssistantChars: Int = Int.MAX_VALUE,
+    ): List<JSONObject> = history.flatMap { turn ->
+        val stamp = if (stampTime && turn.createdAt > 0L) {
+            LocalDateTime.ofInstant(
+                java.time.Instant.ofEpochMilli(turn.createdAt),
+                ZoneId.systemDefault(),
+            ).format(HISTORY_STAMP_FORMAT).let { "[$it] " }
+        } else {
+            ""
+        }
+        listOf(
+            userMessage(stamp + turn.userText),
+            JSONObject()
+                .put("role", "assistant")
+                .put("content", turn.assistantText.take(maxAssistantChars)),
+        )
+    }
 
     private fun jsonSchemaFormat(name: String, schemaJson: String): JSONObject =
         JSONObject()
@@ -516,8 +527,10 @@ class AiService(
         feature: String,
         responseFormat: JSONObject? = null,
         maxTokens: Long = 4096L,
+        priorMessages: List<JSONObject> = emptyList(),
     ): JSONObject {
-        val messages = mutableListOf(userMessage(userText))
+        val messages = priorMessages.toMutableList()
+        messages += userMessage(userText)
         var response = postChat(model, system, messages, tools, responseFormat, maxTokens)
         logUsage(feature, response)
         var rounds = 0
@@ -582,7 +595,7 @@ class AiService(
         }
     }
 
-    /** Executes a search_items/list_recent call from the model and formats the result compactly. */
+    /** Executes a backlog tool call from the model and formats the result compactly. */
     private suspend fun runBacklogTool(tools: BacklogTools, name: String, argumentsJson: String): String {
         val input = runCatching { JSONObject(argumentsJson.ifBlank { "{}" }) }
             .getOrDefault(JSONObject())
@@ -605,7 +618,23 @@ class AiService(
                 val to = parseToolDate(stringOrNull("to"), endOfDay = true)
                     ?: return "error: invalid or missing 'to' (expected YYYY-MM-DD)"
                 if (to < from) return "error: 'to' lies before 'from'"
-                tools.agenda(from, to)
+                // A period that is already over is only answerable with the completed ones
+                // included — default it on instead of relying on the model to ask for it.
+                val includeDone = if (input.has("includeDone")) {
+                    input.optBoolean("includeDone", false)
+                } else {
+                    to < System.currentTimeMillis()
+                }
+                tools.agenda(from, to, includeDone)
+            }
+
+            "list_done" -> {
+                val from = parseToolDate(stringOrNull("from"), endOfDay = false)
+                    ?: return "error: invalid or missing 'from' (expected YYYY-MM-DD)"
+                val to = parseToolDate(stringOrNull("to"), endOfDay = true)
+                    ?: return "error: invalid or missing 'to' (expected YYYY-MM-DD)"
+                if (to < from) return "error: 'to' lies before 'from'"
+                tools.done(from, to, type)
             }
 
             else -> return "error: unknown tool"
@@ -632,7 +661,15 @@ class AiService(
                                 " (" + due.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH) + ")"
                     } ?: "") +
                     (item.recurrence?.let { " recurrence=$it" } ?: "") +
-                    (if (item.done) " done=true" else "")
+                    // Completion date, not just the flag: "wann habe ich X erledigt?" is a
+                    // question the model cannot answer from a boolean.
+                    (if (item.done) " done=true" else "") +
+                    (item.doneAt?.takeIf { item.done }?.let {
+                        " doneAt=" + LocalDateTime.ofInstant(
+                            java.time.Instant.ofEpochMilli(it),
+                            ZoneId.systemDefault(),
+                        ).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                    } ?: "")
         }
     }
 
@@ -650,6 +687,11 @@ class AiService(
     }
 
     companion object {
+        /** Cap for an assistant answer carried in the research history — see [researchAnswer]. */
+        private const val RESEARCH_HISTORY_ANSWER_CHARS = 1200
+
+        private val HISTORY_STAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+
         private val MAPPER = ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 
@@ -735,12 +777,34 @@ class AiService(
               "type": "function",
               "function": {
                 "name": "list_agenda",
-                "description": "List the user's dated, open entries (appointments and tasks/goals with a due date) whose date falls into the given period, sorted by date. Use this for any question about a specific period ('im August', 'nächste Woche', 'dieses Wochenende') instead of relying on the context. Returns up to 50 entries.",
+                "description": "List the user's dated entries (appointments and tasks/goals with a due date) whose date falls into the given period, sorted by date. Use this for any question about a specific period ('im August', 'nächste Woche', 'dieses Wochenende', 'welche Termine hatte ich letzte Woche?') instead of relying on the context. Returns up to 50 entries.",
                 "parameters": {
                   "type": "object",
                   "properties": {
                     "from": { "type": "string", "description": "Start of the period as local date YYYY-MM-DD (inclusive)." },
-                    "to": { "type": "string", "description": "End of the period as local date YYYY-MM-DD (inclusive)." }
+                    "to": { "type": "string", "description": "End of the period as local date YYYY-MM-DD (inclusive)." },
+                    "includeDone": { "type": "boolean", "description": "Include entries already completed. Set true for periods in the past: appointments that have taken place are closed automatically, so they are missing without it. Defaults to true when the period lies entirely in the past, false otherwise." }
+                  },
+                  "required": ["from", "to"]
+                }
+              }
+            }
+            """.trimIndent(),
+        )
+
+        private val LIST_DONE_TOOL = JSONObject(
+            """
+            {
+              "type": "function",
+              "function": {
+                "name": "list_done",
+                "description": "List the entries the user COMPLETED within a period, most recently completed first, optionally of one type. Completed entries are never deleted — they stay queryable forever. Use this for every question about what is already done or how a period went ('was habe ich diese Woche erledigt?', 'welche Aufgaben sind schon fertig?', 'wie viel habe ich im Juli geschafft?'). Returns up to 50 entries with their completion date.",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "from": { "type": "string", "description": "Start of the period as local date YYYY-MM-DD (inclusive)." },
+                    "to": { "type": "string", "description": "End of the period as local date YYYY-MM-DD (inclusive)." },
+                    "type": { "type": "string", "description": "Optional filter: one of $TYPE_VALUES. Omit for everything." }
                   },
                   "required": ["from", "to"]
                 }

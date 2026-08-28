@@ -336,7 +336,6 @@ fun ChatScreen(onOpenDrawer: () -> Unit, viewModel: ChatViewModel = viewModel())
                     val hintRes = when (mode) {
                         ChatMode.CAPTURE -> R.string.chat_input_hint
                         ChatMode.ASK -> R.string.chat_hint_ask
-                        ChatMode.REVIEW -> R.string.chat_hint_review
                         ChatMode.RESEARCH -> R.string.chat_hint_research
                         ChatMode.STRUCTURE -> R.string.chat_hint_structure
                     }
@@ -747,7 +746,6 @@ private fun ClearChatDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
 private fun modeLabelRes(mode: ChatMode): Int = when (mode) {
     ChatMode.CAPTURE -> R.string.chat_mode_capture
     ChatMode.ASK -> R.string.chat_mode_ask
-    ChatMode.REVIEW -> R.string.chat_mode_review
     ChatMode.RESEARCH -> R.string.chat_mode_research
     ChatMode.STRUCTURE -> R.string.chat_mode_structure
 }
@@ -909,7 +907,7 @@ private fun ChatBubbles(
 
             CaptureStatus.DONE -> entry.message?.let { msg ->
                 val json = runCatching { JSONObject(msg.summaryJson) }.getOrNull()
-                // Free-text answer from a chat function (ask/review/research) — the text a
+                // Free-text answer from a chat function (ask/research) — the text a
                 // long-press on this bubble copies or adds to the wiki. Structured
                 // items/links/commands bubbles have no single text of their own, so those
                 // stay delete-only in the menu.

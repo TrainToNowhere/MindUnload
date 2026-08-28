@@ -36,6 +36,7 @@ fun IdeasScreen(
     viewModel: ItemsViewModel = viewModel()
 ) {
     val ideas by viewModel.items(ItemType.IDEA).collectAsState(initial = emptyList())
+    val showDone by viewModel.showDone.collectAsState()
 
     Column(
         Modifier
@@ -48,6 +49,12 @@ fun IdeasScreen(
             stringResource(R.string.ideas_subtitle, ideas.size),
             style = MaterialTheme.typography.bodySmall,
             color = PlannerColors.muted
+        )
+
+        ShowDoneFilter(
+            checked = showDone,
+            onCheckedChange = viewModel::setShowDone,
+            modifier = Modifier.padding(top = 12.dp),
         )
 
         Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

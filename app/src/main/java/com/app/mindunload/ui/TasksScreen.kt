@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,6 +26,7 @@ fun TasksScreen(
     viewModel: ItemsViewModel = viewModel(),
 ) {
     val tasks by viewModel.items(ItemType.TASK).collectAsState(initial = emptyList())
+    val showDone by viewModel.showDone.collectAsState()
     val groups = listOf(
         R.string.priority_group_high to tasks.filter { it.priority == Priority.HIGH },
         R.string.priority_group_medium to tasks.filter { it.priority == Priority.MEDIUM },
@@ -45,6 +45,13 @@ fun TasksScreen(
                 title = stringResource(R.string.tab_tasks),
                 subtitle = stringResource(R.string.tasks_subtitle, tasks.count { !it.done }),
                 onOpenDrawer = onOpenDrawer,
+            )
+        }
+        item(key = "show-done") {
+            ShowDoneFilter(
+                checked = showDone,
+                onCheckedChange = viewModel::setShowDone,
+                modifier = Modifier.padding(top = 8.dp),
             )
         }
         groups.forEach { (labelRes, items) ->

@@ -35,7 +35,7 @@ class SettingsStore(context: Context) {
             prefs.edit { putString(KEY_FAST_MODEL, value) }
         }
 
-    /** OpenRouter model id used for research/review, e.g. "anthropic/claude-sonnet-5". */
+    /** OpenRouter model id used for research, e.g. "anthropic/claude-sonnet-5". */
     var strongModel: String
         get() = prefs.getString(KEY_STRONG_MODEL, OpenRouterModels.DEFAULT_STRONG)
             ?: OpenRouterModels.DEFAULT_STRONG

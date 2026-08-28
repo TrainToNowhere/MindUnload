@@ -27,19 +27,31 @@ interface PlannerItemDao {
     // All "active" queries hide archived entries (archivedAt IS NULL) — archived
     // entries only exist for the review and byId access.
 
-    /** Active entries of one type; completed ones disappear once [doneCutoff] (usually now - 1 day) has passed their doneAt. */
+    /**
+     * Active entries of one type; completed ones disappear once [doneCutoff] (usually now - 1 day)
+     * has passed their doneAt — unless [includeDone] is set, which is the lists' "show completed"
+     * filter. Hiding only: the rows stay in the table either way.
+     */
     @Query(
         "SELECT * FROM items WHERE archivedAt IS NULL AND type = :type " +
-                "AND (done = 0 OR doneAt >= :doneCutoff) ORDER BY done ASC, priority ASC, createdAt DESC",
+                "AND (done = 0 OR :includeDone OR doneAt >= :doneCutoff) " +
+                "ORDER BY done ASC, priority ASC, createdAt DESC",
     )
-    fun byType(type: ItemType, doneCutoff: Long): Flow<List<PlannerItem>>
+    fun byType(
+        type: ItemType,
+        doneCutoff: Long,
+        includeDone: Boolean = false
+    ): Flow<List<PlannerItem>>
 
-    /** Active appointments; past ones disappear once [cutoff] (usually now - 1 day) has passed them. */
+    /**
+     * Active appointments; past ones disappear once [cutoff] (usually now - 1 day) has passed
+     * them — unless [includePast] is set, the "show completed" filter.
+     */
     @Query(
         "SELECT * FROM items WHERE archivedAt IS NULL AND type = 'APPOINTMENT' " +
-                "AND (dueAt IS NULL OR dueAt >= :cutoff) ORDER BY done ASC, dueAt ASC",
+                "AND (dueAt IS NULL OR :includePast OR dueAt >= :cutoff) ORDER BY done ASC, dueAt ASC",
     )
-    fun appointments(cutoff: Long): Flow<List<PlannerItem>>
+    fun appointments(cutoff: Long, includePast: Boolean = false): Flow<List<PlannerItem>>
 
     /**
      * Appointments inside a half-open window [from, to). Unlike [appointments] this keeps past
@@ -53,9 +65,10 @@ interface PlannerItemDao {
 
     @Query(
         "SELECT * FROM items WHERE archivedAt IS NULL AND type = 'SHOPPING_ITEM' " +
-                "AND (done = 0 OR doneAt >= :doneCutoff) ORDER BY listName, done ASC, createdAt DESC",
+                "AND (done = 0 OR :includeDone OR doneAt >= :doneCutoff) " +
+                "ORDER BY listName, done ASC, createdAt DESC",
     )
-    fun shoppingItems(doneCutoff: Long): Flow<List<PlannerItem>>
+    fun shoppingItems(doneCutoff: Long, includeDone: Boolean = false): Flow<List<PlannerItem>>
 
     @Query("SELECT * FROM items WHERE archivedAt IS NULL")
     fun all(): Flow<List<PlannerItem>>
@@ -108,12 +121,28 @@ interface PlannerItemDao {
     )
     suspend fun openCountsByType(): List<TypeCount>
 
-    /** Dated entries in a period, for the AI's list_agenda tool ("was steht im August an?"). */
+    /**
+     * Dated entries in a period, for the AI's list_agenda tool ("was steht im August an?").
+     * [includeDone] keeps the completed ones in — required for periods in the past, where
+     * the RecurrenceRoller has already closed every appointment that has taken place.
+     */
     @Query(
-        "SELECT * FROM items WHERE archivedAt IS NULL AND done = 0 " +
+        "SELECT * FROM items WHERE archivedAt IS NULL AND (done = 0 OR :includeDone) " +
                 "AND dueAt BETWEEN :from AND :to ORDER BY dueAt ASC LIMIT 50",
     )
-    suspend fun agendaItems(from: Long, to: Long): List<PlannerItem>
+    suspend fun agendaItems(from: Long, to: Long, includeDone: Boolean = false): List<PlannerItem>
+
+    /**
+     * Completed entries whose doneAt falls into a period, most recently completed first —
+     * for the AI's list_done tool ("was habe ich diese Woche erledigt?"). Archived entries
+     * stay out: those were discarded by the user, not completed.
+     */
+    @Query(
+        "SELECT * FROM items WHERE archivedAt IS NULL AND done = 1 " +
+                "AND doneAt BETWEEN :from AND :to AND (:type IS NULL OR type = :type) " +
+                "ORDER BY doneAt DESC LIMIT :limit",
+    )
+    suspend fun doneItems(from: Long, to: Long, type: String?, limit: Int): List<PlannerItem>
 
     @Query("SELECT DISTINCT listName FROM items WHERE archivedAt IS NULL AND listName IS NOT NULL AND listName != ''")
     suspend fun listNames(): List<String>
@@ -167,22 +196,15 @@ interface PlannerItemDao {
 
     @Query(
         "SELECT * FROM items WHERE archivedAt IS NULL AND category = :category " +
-                "AND (done = 0 OR doneAt >= :doneCutoff) ORDER BY done ASC, type, createdAt DESC",
+                "AND (done = 0 OR :includeDone OR doneAt >= :doneCutoff) " +
+                "ORDER BY done ASC, type, createdAt DESC",
     )
-    fun byCategory(category: String, doneCutoff: Long): Flow<List<PlannerItem>>
+    fun byCategory(
+        category: String,
+        doneCutoff: Long,
+        includeDone: Boolean = false,
+    ): Flow<List<PlannerItem>>
 
-    /**
-     * Review: everything that happened in the period — completed, newly captured, took place
-     * (appointments), or archived. Deliberately includes archived entries.
-     */
-    @Query(
-        "SELECT * FROM items WHERE (doneAt BETWEEN :from AND :to) " +
-                "OR (createdAt BETWEEN :from AND :to) " +
-                "OR (type = 'APPOINTMENT' AND dueAt BETWEEN :from AND :to) " +
-                "OR (archivedAt BETWEEN :from AND :to) " +
-                "ORDER BY createdAt ASC",
-    )
-    suspend fun reviewItems(from: Long, to: Long): List<PlannerItem>
 }
 
 data class CategoryCount(val name: String, val count: Int)

@@ -1,5 +1,0 @@
-Write a personal review from this (Markdown, sections with ## headings): what was
-accomplished and experienced, what was learned, what was left undone or is still open?
-Close with 2-3 concrete, kind reflection prompts (what went well and is worth repeating,
-what could be improved). Base everything only on the data above — invent nothing.
-Tone: warm, clear, no platitudes.
