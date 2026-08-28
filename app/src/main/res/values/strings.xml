@@ -47,7 +47,6 @@
     <string name="review_year">Year</string>
     <string name="review_generate">Create review</string>
     <string name="review_generating">Looking back…</string>
-    <string name="review_empty">Nothing recorded in this period yet.</string>
     <string name="research_badge">Research worthwhile</string>
     <string name="research_suggested_hint">Research would pay off here.</string>
     <string name="action_import">Import JSON data</string>
@@ -78,11 +77,9 @@
 
     <string name="chat_mode_capture">Capture</string>
     <string name="chat_mode_ask">Ask</string>
-    <string name="chat_mode_review">Review</string>
     <string name="chat_mode_research">Research</string>
     <string name="chat_mode_structure">Thoughts</string>
     <string name="chat_hint_ask">e.g. tasks on a topic, day plan, knowledge</string>
-    <string name="chat_hint_review">e.g. review of the last week/month/year</string>
     <string name="chat_hint_research">e.g. tire pressure Golf VII winter tires</string>
     <string name="chat_hint_structure">Speak or type a longer thought — it comes back structured</string>
     <string name="chat_research_save">Save as knowledge</string>
@@ -140,6 +137,7 @@
     <string name="priority_group_high">High</string>
     <string name="priority_group_medium">Medium</string>
     <string name="priority_group_low">Low</string>
+    <string name="filter_show_done">Show completed</string>
     <string name="list_empty">Nothing here yet.</string>
 
     <string name="appointments_subtitle">One month, grouped by week</string>

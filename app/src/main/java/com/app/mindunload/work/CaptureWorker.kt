@@ -44,6 +44,20 @@ import java.time.Duration
 /** How many earlier exchanges the "structure thoughts" mode keeps as conversation context. */
 private const val STRUCTURE_HISTORY_LIMIT = 8
 
+/** How many earlier exchanges the "ask" mode keeps — enough for a chain of follow-ups. */
+private const val ASK_HISTORY_LIMIT = 6
+
+/** Research runs on the strong model and answers long, so its history stays short. */
+private const val RESEARCH_HISTORY_LIMIT = 2
+
+/**
+ * Age limit for the ask/research history. A stale turn is worse than none: yesterday's
+ * "was steht morgen an?" points at a different day than today's, and an hours-old research
+ * thread is almost always a new topic rather than a follow-up. "Structure thoughts" has no
+ * such limit — a train of thought does not go stale.
+ */
+private val CHAT_HISTORY_MAX_AGE_MS = Duration.ofHours(2).toMillis()
+
 /**
  * Outbox processing: takes PENDING/FAILED captures, has the model structure them
  * and saves items + link suggestions. Runs with a network constraint and backoff —
@@ -58,6 +72,8 @@ class CaptureWorker(context: Context, params: WorkerParameters) : CoroutineWorke
 
         // Targeted backlog access for the tool loop: the model searches itself
         // (all types, including completed) instead of getting the whole backlog in the prompt.
+        // Completed entries stay reachable on purpose — they are only marked done, never
+        // removed, so questions about them have to be answerable.
         val backlogTools = object : BacklogTools {
             override suspend fun search(query: String, type: ItemType?) =
                 repo.itemDao.searchItems(query, type?.name)
@@ -68,8 +84,11 @@ class CaptureWorker(context: Context, params: WorkerParameters) : CoroutineWorke
             override suspend fun open(type: ItemType?) =
                 repo.itemDao.openItems(type?.name, 50)
 
-            override suspend fun agenda(fromMillis: Long, toMillis: Long) =
-                repo.itemDao.agendaItems(fromMillis, toMillis)
+            override suspend fun agenda(fromMillis: Long, toMillis: Long, includeDone: Boolean) =
+                repo.itemDao.agendaItems(fromMillis, toMillis, includeDone)
+
+            override suspend fun done(fromMillis: Long, toMillis: Long, type: ItemType?) =
+                repo.itemDao.doneItems(fromMillis, toMillis, type?.name, 50)
         }
 
         var anyFailedRetryable = false
@@ -80,7 +99,7 @@ class CaptureWorker(context: Context, params: WorkerParameters) : CoroutineWorke
                 // works on plain text and does not care where it came from.
                 val capture = extractAttachmentText(repo, claude, pending)
 
-                // Chat functions (ask/review/research) return a free-text answer
+                // Chat functions (ask/research) return a free-text answer
                 // instead of the structured-output capture — same outbox, same retries.
                 if (capture.mode != ChatMode.CAPTURE) {
                     val answer = chatAnswer(repo, claude, app.researchService, backlogTools, capture)
@@ -295,7 +314,16 @@ class CaptureWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         capture: com.app.mindunload.data.CaptureRequest,
     ): JSONObject = when (capture.mode) {
         ChatMode.RESEARCH -> {
-            val result = research.researchTopic(capture.rawText)
+            val result = research.researchTopic(
+                capture.rawText,
+                conversationHistory(
+                    repo,
+                    ChatMode.RESEARCH,
+                    capture.id,
+                    RESEARCH_HISTORY_LIMIT,
+                    CHAT_HISTORY_MAX_AGE_MS,
+                ),
+            )
             JSONObject().put("answer", result.summary).put("sources", result.sources)
         }
 
@@ -322,57 +350,61 @@ class CaptureWorker(context: Context, params: WorkerParameters) : CoroutineWorke
             // Inventory per type: without it the model answers "nothing found" for entries
             // that are simply not in the context excerpt.
             val openCounts = repo.itemDao.openCountsByType().associate { it.type to it.count }
-            claude.answerQuery(capture.rawText, backlogTools, upcoming, datedTasks, openCounts)
-        }
-
-        ChatMode.REVIEW -> {
-            val text = capture.rawText.lowercase()
-            val now = java.time.LocalDateTime.now()
-            val (fromDate, label) = when {
-                "jahr" in text || "year" in text ->
-                    now.minusYears(1) to applicationContext.getString(R.string.review_year)
-
-                "monat" in text || "month" in text ->
-                    now.minusMonths(1) to applicationContext.getString(R.string.review_month)
-
-                else -> now.minusWeeks(1) to applicationContext.getString(R.string.review_week)
-            }
-            val zone = java.time.ZoneId.systemDefault()
-            val from = fromDate.atZone(zone).toInstant().toEpochMilli()
-            val to = now.atZone(zone).toInstant().toEpochMilli()
-            val items = repo.itemDao.reviewItems(from, to)
-            if (items.isEmpty()) {
-                applicationContext.getString(R.string.review_empty)
-            } else {
-                claude.generateReview(items, from, to, label)
-            }
+            claude.answerQuery(
+                capture.rawText,
+                backlogTools,
+                upcoming,
+                datedTasks,
+                openCounts,
+                conversationHistory(
+                    repo,
+                    ChatMode.ASK,
+                    capture.id,
+                    ASK_HISTORY_LIMIT,
+                    CHAT_HISTORY_MAX_AGE_MS,
+                ),
+            )
         }
 
         ChatMode.STRUCTURE ->
-            claude.structureThoughts(capture.rawText, structureHistory(repo, capture.id))
+            claude.structureThoughts(
+                capture.rawText,
+                conversationHistory(repo, ChatMode.STRUCTURE, capture.id, STRUCTURE_HISTORY_LIMIT),
+            )
 
         ChatMode.CAPTURE, ChatMode.RESEARCH ->
             throw IllegalStateException("${capture.mode} handled separately")
     }
 
     /**
-     * Earlier turns of this same "structure thoughts" conversation, oldest first — lets
-     * the model react to a reply instead of treating every message as a fresh brain dump.
-     * Bounded window: enough to follow the thread without the prompt growing unbounded.
+     * Earlier turns of the same chat mode, oldest first — lets a mode react to a reply
+     * instead of treating every message as a fresh start. Per mode, because the modes are
+     * separate conversations: a research follow-up must not drag a day-planning question
+     * along. Bounded by [limit] and, where the mode deals in relative dates, by [maxAgeMs]
+     * (null = no age limit). Only the free-text modes qualify — capture has no conversation
+     * to continue, its follow-ups go through the backlog search tools instead.
+     *
+     * Reads the answer out of the stored chat message, which for research is the summary
+     * without its source list — exactly what a follow-up needs.
      */
-    private suspend fun structureHistory(
+    private suspend fun conversationHistory(
         repo: PlannerRepository,
+        mode: ChatMode,
         beforeCaptureId: Long,
-    ): List<com.app.mindunload.ai.ThoughtTurn> {
+        limit: Int,
+        maxAgeMs: Long? = null,
+    ): List<com.app.mindunload.ai.ConversationTurn> {
+        val oldest = maxAgeMs?.let { System.currentTimeMillis() - it } ?: Long.MIN_VALUE
         val recent = repo.captureDao
-            .recentDoneByMode(ChatMode.STRUCTURE.name, beforeCaptureId, STRUCTURE_HISTORY_LIMIT)
+            .recentDoneByMode(mode.name, beforeCaptureId, limit)
+            .filter { it.createdAt >= oldest }
             .sortedBy { it.createdAt }
         return recent.mapNotNull { cap ->
             val answer = repo.chatMessageDao.byCaptureId(cap.id)
                 ?.let { runCatching { JSONObject(it.summaryJson).optString("answer") }.getOrNull() }
                 ?.takeIf { it.isNotBlank() }
                 ?: return@mapNotNull null
-            com.app.mindunload.ai.ThoughtTurn(cap.rawText, answer)
+            com.app.mindunload.ai.ConversationTurn(cap.rawText, answer, cap.createdAt)
         }
     }
 

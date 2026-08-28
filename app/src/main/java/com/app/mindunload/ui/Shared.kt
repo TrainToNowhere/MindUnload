@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -114,6 +115,25 @@ fun BackHeader(
             Text(label, style = MaterialTheme.typography.labelLarge, color = PlannerColors.muted)
         }
     }
+}
+
+/**
+ * "Show completed" filter for the list screens. Completed entries leave the lists a day
+ * after being checked off — this brings them back. Nothing is ever deleted, so the chip
+ * always has the full history behind it; it is a view switch, not a recovery feature.
+ */
+@Composable
+fun ShowDoneFilter(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    FilterChip(
+        selected = checked,
+        onClick = { onCheckedChange(!checked) },
+        label = { Text(stringResource(R.string.filter_show_done)) },
+        modifier = modifier,
+    )
 }
 
 @Composable

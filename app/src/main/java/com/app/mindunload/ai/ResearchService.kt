@@ -39,8 +39,13 @@ class ResearchService(
     /**
      * Researches a free topic from the chat — without an existing entry. The result is
      * only shown in the chat; the user decides whether it becomes a knowledge entry.
+     * [history] are the earlier turns of the same research conversation, so a follow-up
+     * ("und was kostet das in Deutschland?") builds on what was already found.
      */
-    suspend fun researchTopic(topic: String): ResearchResult {
+    suspend fun researchTopic(
+        topic: String,
+        history: List<ConversationTurn> = emptyList(),
+    ): ResearchResult {
         val prompt = buildString {
             appendLine("Research the following topic for the user:")
             appendLine()
@@ -48,11 +53,15 @@ class ResearchService(
             appendLine()
             appendLine(prompts.withLanguageRule(com.app.mindunload.R.raw.prompt_research))
         }
-        return runResearch(prompt, "researchTopic")
+        return runResearch(prompt, "researchTopic", history)
     }
 
-    private suspend fun runResearch(prompt: String, feature: String): ResearchResult {
-        val text = ai.researchAnswer(prompt, feature)
+    private suspend fun runResearch(
+        prompt: String,
+        feature: String,
+        history: List<ConversationTurn> = emptyList(),
+    ): ResearchResult {
+        val text = ai.researchAnswer(prompt, feature, history)
         return ResearchResult(summary = stripSourcesSection(text), sources = extractSources(text))
     }
 

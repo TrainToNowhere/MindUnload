@@ -62,10 +62,12 @@ Change commands (→ "commands", existing entries only):
   rule; add a 'set_due' command when a new start date is mentioned. "Nicht mehr
   wiederholen" → set_recurrence with 'none'. Changes to "the series" target the one
   entry that carries the rule (dueAt is always the next occurrence).
-- Resolve the target entry with the search tools (all types are searchable; entries
-  marked done=true are completed, relevant for 'uncomplete'). Only emit a command when
-  you are confident which entry is meant; if the search results are ambiguous or empty
-  even after a retry with another keyword, omit the command rather than guessing.
+- Resolve the target entry with the search tools (all types are searchable, completed
+  ones included: they carry done=true plus doneAt with the completion date, which
+  resolves references like "die Aufgabe von gestern" and matters for 'uncomplete').
+  Only emit a command when you are confident which entry is meant; if the search results
+  are ambiguous or empty even after a retry with another keyword, omit the command
+  rather than guessing.
 - Every command needs a short "reason" sentence confirming what was changed,
   e.g. "Priorität von \"Steuerunterlagen\" auf hoch gesetzt."
 - Never invent an action the input didn't ask for.

@@ -38,6 +38,7 @@ fun CategoryScreen(
     viewModel: ItemsViewModel = viewModel(),
 ) {
     val items by viewModel.byCategory(name).collectAsState(initial = emptyList())
+    val showDone by viewModel.showDone.collectAsState()
 
     Column(
         Modifier
@@ -50,6 +51,12 @@ fun CategoryScreen(
             stringResource(R.string.category_subtitle, items.size),
             style = MaterialTheme.typography.bodySmall,
             color = PlannerColors.muted,
+        )
+
+        ShowDoneFilter(
+            checked = showDone,
+            onCheckedChange = viewModel::setShowDone,
+            modifier = Modifier.padding(top = 12.dp),
         )
 
         Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

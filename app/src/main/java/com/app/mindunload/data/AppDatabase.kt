@@ -53,6 +53,14 @@ private val MIGRATION_6_7 = object : Migration(6, 7) {
     }
 }
 
+private val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // The review chat mode is gone — ask covers it. Its history entries would
+        // otherwise deserialize into a mode that no longer exists.
+        db.execSQL("UPDATE captures SET mode = 'ASK' WHERE mode = 'REVIEW'")
+    }
+}
+
 @Database(
     entities = [
         PlannerItem::class,
@@ -62,7 +70,7 @@ private val MIGRATION_6_7 = object : Migration(6, 7) {
         ChatMessage::class,
         ApiUsage::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -91,10 +99,13 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_4_5,
                         MIGRATION_5_6,
                         MIGRATION_6_7,
+                        MIGRATION_7_8,
                     )
-                    // Private app, single user: for schema changes not covered here,
-                    // recreate instead of migrate — but real data is preserved via migrations.
-                    .fallbackToDestructiveMigration(true)
+                    // Deliberately NO fallbackToDestructiveMigration: entries are only ever
+                    // marked done or archived, never dropped, and a destructive fallback would
+                    // silently wipe the whole backlog on the first schema change that forgets
+                    // its migration. Room then fails loudly at open time instead — the missing
+                    // migration is a bug to fix, not data to throw away.
                     .build().also { instance = it }
             }
     }

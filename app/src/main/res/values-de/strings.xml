@@ -47,7 +47,6 @@
     <string name="review_year">Jahr</string>
     <string name="review_generate">Rückblick erstellen</string>
     <string name="review_generating">Blicke zurück…</string>
-    <string name="review_empty">In diesem Zeitraum ist noch nichts erfasst.</string>
     <string name="research_badge">Recherche lohnt sich</string>
     <string name="research_suggested_hint">Hier würde sich eine Recherche lohnen.</string>
     <string name="action_import">JSON-Daten importieren</string>
@@ -78,11 +77,9 @@
 
     <string name="chat_mode_capture">Erfassen</string>
     <string name="chat_mode_ask">Fragen</string>
-    <string name="chat_mode_review">Rückblick</string>
     <string name="chat_mode_research">Recherche</string>
     <string name="chat_mode_structure">Gedanken</string>
     <string name="chat_hint_ask">z.B. Aufgaben zu einem Thema, Tagesplan, Wissen</string>
-    <string name="chat_hint_review">z.B. Rückblick auf die letzte Woche/Monat/Jahr</string>
     <string name="chat_hint_research">z.B. Reifendruck Golf VII Winterreifen</string>
     <string name="chat_hint_structure">Sprich oder tippe einen längeren Gedanken — er kommt strukturiert zurück</string>
     <string name="chat_research_save">Als Wissen speichern</string>
@@ -140,6 +137,7 @@
     <string name="priority_group_high">Hoch</string>
     <string name="priority_group_medium">Mittel</string>
     <string name="priority_group_low">Niedrig</string>
+    <string name="filter_show_done">Erledigte anzeigen</string>
     <string name="list_empty">Hier ist noch nichts.</string>
 
     <string name="appointments_subtitle">Ein Monat, nach Wochen gruppiert</string>

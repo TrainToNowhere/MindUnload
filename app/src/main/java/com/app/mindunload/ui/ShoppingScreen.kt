@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
@@ -39,6 +38,7 @@ import com.app.mindunload.ui.theme.PlannerColors
 @Composable
 fun ShoppingScreen(onOpenDrawer: () -> Unit, viewModel: ItemsViewModel = viewModel()) {
     val allItems by viewModel.items(ItemType.SHOPPING_ITEM).collectAsState(initial = emptyList())
+    val showDone by viewModel.showDone.collectAsState()
     val defaultListName = stringResource(R.string.shopping_default_list)
     val lists = allItems.groupBy { it.listName ?: defaultListName }
     val openCount = allItems.count { !it.done }
@@ -59,6 +59,13 @@ fun ShoppingScreen(onOpenDrawer: () -> Unit, viewModel: ItemsViewModel = viewMod
                 title = stringResource(R.string.tab_shopping),
                 subtitle = stringResource(R.string.shopping_subtitle, lists.size, openCount),
                 onOpenDrawer = onOpenDrawer,
+            )
+        }
+        item(key = "show-done") {
+            ShowDoneFilter(
+                checked = showDone,
+                onCheckedChange = viewModel::setShowDone,
+                modifier = Modifier.padding(top = 8.dp),
             )
         }
         lists.forEach { (listName, items) ->

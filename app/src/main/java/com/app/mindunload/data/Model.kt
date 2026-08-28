@@ -23,13 +23,17 @@ enum class CaptureStatus { TRANSCRIBING, PENDING, PROCESSING, DONE, FAILED }
 
 /**
  * What a chat input is for — determines the system prompt during processing:
- * CAPTURE = capturing/commands (structured output), ASK = queries/summaries
- * (tasks by topic, appointments, goals, knowledge, day planning), REVIEW =
- * retrospective over a period, RESEARCH = web research on a free topic, savable
- * as a knowledge entry, STRUCTURE = turns a (typically long, spoken) stream of
- * thought into a structured Markdown note, also savable as a knowledge entry.
+ * CAPTURE = capturing/commands (structured output), ASK = queries/summaries and
+ * retrospectives (tasks by topic, appointments, goals, knowledge, day planning, "what
+ * did I get done last week"), RESEARCH = web research on a free topic, savable as a
+ * knowledge entry, STRUCTURE = turns a (typically long, spoken) stream of thought into
+ * a structured Markdown note, also savable as a knowledge entry.
+ *
+ * There used to be a separate REVIEW mode; ASK covers it since it can query completed
+ * entries by period itself (list_done), so the extra mode only added a wrong choice to
+ * make. Removed in DB version 8, which rewrites old REVIEW rows to ASK.
  */
-enum class ChatMode { CAPTURE, ASK, REVIEW, RESEARCH, STRUCTURE }
+enum class ChatMode { CAPTURE, ASK, RESEARCH, STRUCTURE }
 
 /**
  * What is attached to a chat message besides its text — see [CaptureRequest.attachmentPath].

@@ -560,17 +560,34 @@ class DrawerViewModel(application: Application) : AndroidViewModel(application) 
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 }
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class ItemsViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = app.repository
 
-    fun items(type: ItemType): Flow<List<PlannerItem>> = when (type) {
-        ItemType.APPOINTMENT -> repo.itemDao.appointments(listCutoff())
-        ItemType.SHOPPING_ITEM -> repo.itemDao.shoppingItems(listCutoff())
-        else -> repo.itemDao.byType(type, listCutoff())
+    /**
+     * "Show completed" filter for the lists. Off by default — the lists are a view of what
+     * is still open, and completed entries drop out of them a day after being checked off
+     * ([LIST_HIDE_GRACE_MS]). Switching it on brings every completed entry back: they are
+     * only hidden, never deleted, so this filter always has the full history behind it.
+     */
+    private val _showDone = MutableStateFlow(false)
+    val showDone: StateFlow<Boolean> = _showDone
+
+    fun setShowDone(value: Boolean) {
+        _showDone.value = value
     }
 
-    fun byCategory(name: String): Flow<List<PlannerItem>> =
-        repo.itemDao.byCategory(name, listCutoff())
+    fun items(type: ItemType): Flow<List<PlannerItem>> = _showDone.flatMapLatest { includeDone ->
+        when (type) {
+            ItemType.APPOINTMENT -> repo.itemDao.appointments(listCutoff(), includeDone)
+            ItemType.SHOPPING_ITEM -> repo.itemDao.shoppingItems(listCutoff(), includeDone)
+            else -> repo.itemDao.byType(type, listCutoff(), includeDone)
+        }
+    }
+
+    fun byCategory(name: String): Flow<List<PlannerItem>> = _showDone.flatMapLatest { includeDone ->
+        repo.itemDao.byCategory(name, listCutoff(), includeDone)
+    }
 
     /** Appointments of one calendar month, past months included. */
     fun appointmentsOfMonth(month: YearMonth): Flow<List<PlannerItem>> {
